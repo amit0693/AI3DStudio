@@ -41,7 +41,7 @@ export default function TabLayout() {
         headerTintColor: colors.ceramic,
         headerTitleStyle: { fontWeight: '900' },
         headerRight: HeaderActions,
-        tabBarActiveTintColor: colors.action,
+        tabBarActiveTintColor: colors.actionDark,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.paper, borderTopColor: colors.line, minHeight: 68, paddingTop: 5 },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '800', paddingBottom: 3 },
@@ -60,5 +60,5 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', marginRight: 8, gap: 2 },
   headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  badge: { backgroundColor: colors.action, color: colors.white, fontWeight: '900' },
+  badge: { backgroundColor: colors.action, color: colors.ink, fontWeight: '900' },
 });

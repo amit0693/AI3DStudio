@@ -1,10 +1,10 @@
 .builder {
-  --quote-ink: #0c1b33;
-  --quote-muted: #5b6475;
-  --quote-line: #d8e1ee;
-  --quote-accent: #2457d6;
-  --quote-accent-strong: #1b46b8;
-  --quote-soft: #f3f7ff;
+  --quote-ink: #202722;
+  --quote-muted: #5f6c64;
+  --quote-line: #d9e5da;
+  --quote-accent: #3f6f4b;
+  --quote-accent-strong: #2f5b3b;
+  --quote-soft: #f1f8f1;
   color: var(--quote-ink);
   display: grid;
   gap: 1.5rem;
@@ -46,7 +46,7 @@
 
 .dropzone {
   background: var(--quote-soft);
-  border: 1.5px dashed #9db6df;
+  border: 1.5px dashed #a9cbb0;
   border-radius: 1rem;
   cursor: pointer;
   display: grid;
@@ -57,7 +57,7 @@
 
 .dropzone:hover,
 .dropzone:focus-within {
-  background: #e8f1ff;
+  background: #e8f4e8;
   border-color: var(--quote-accent);
 }
 
@@ -110,10 +110,10 @@
 
 .button {
   align-items: center;
-  background: var(--quote-accent);
+  background: #a8d5af;
   border: 0;
   border-radius: 999px;
-  color: #fff;
+  color: var(--quote-ink);
   cursor: pointer;
   display: inline-flex;
   font: inherit;
@@ -124,7 +124,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: var(--quote-accent-strong);
+  background: #91c59b;
 }
 
 .button:disabled {
@@ -176,7 +176,7 @@
 }
 
 .result {
-  background: #fffdfc;
+  background: #fffefa;
   display: grid;
   gap: 1rem;
 }

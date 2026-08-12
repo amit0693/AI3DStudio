@@ -70,8 +70,8 @@ export function Button({
         styles.button, styles[`button_${variant}`], compact && styles.buttonCompact,
         unavailable && styles.buttonDisabled, pressed && !unavailable && styles.pressed,
       ]}>
-      {loading ? <ActivityIndicator color={variant === 'primary' || variant === 'dark' ? colors.white : colors.ink} /> : (
-        <Text style={[styles.buttonLabel, (variant === 'secondary' || variant === 'ghost') && styles.buttonLabelDark]}>{label}</Text>
+      {loading ? <ActivityIndicator color={variant === 'dark' ? colors.white : colors.ink} /> : (
+        <Text style={[styles.buttonLabel, variant === 'dark' && styles.buttonLabelLight]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -109,11 +109,11 @@ export function EmptyState({ title, message, action }: { title: string; message:
 const categoryColors: Record<string, { background: string; object: string }> = {
   'Gifts & Personalization': { background: colors.clayPale, object: colors.clay },
   'Desk & Tech': { background: colors.ice, object: colors.action },
-  'Home & Organization': { background: '#EAF0F8', object: '#3E5B7D' },
-  'Plants & Decor': { background: '#EDF4FF', object: '#5D82B5' },
-  'Gaming & Hobbies': { background: '#E7EEFF', object: '#315FAF' },
+  'Home & Organization': { background: '#E8F2E8', object: '#5A8062' },
+  'Plants & Decor': { background: '#EEF7EC', object: '#6D9B70' },
+  'Gaming & Hobbies': { background: '#E4F0E5', object: '#4F7D5A' },
   Seasonal: { background: '#FFF4D8', object: '#B45E3F' },
-  'Business & Events': { background: '#E1F1FF', object: colors.actionDark },
+  'Business & Events': { background: '#E2F1E3', object: colors.actionDark },
 };
 
 export function ProductVisual({ product, height = 180 }: { product: Product; height?: number }) {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.ink, fontFamily: typography.display, fontSize: 27, lineHeight: 31, fontWeight: '700', letterSpacing: -0.35 },
   body: { color: colors.text, fontFamily: typography.body, fontSize: 16, lineHeight: 24 },
   muted: { color: colors.muted },
-  bodyLight: { color: '#E6EEF9' },
+  bodyLight: { color: '#E4ECE5' },
   card: { backgroundColor: colors.paper, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: spacing.md, gap: spacing.sm },
   button: { minHeight: 50, paddingHorizontal: spacing.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.action },
   buttonCompact: { minHeight: 44, paddingHorizontal: 14 },
@@ -163,8 +163,8 @@ const styles = StyleSheet.create({
   button_dark: { backgroundColor: colors.ink, borderColor: colors.ink },
   buttonDisabled: { opacity: 0.45 },
   pressed: { transform: [{ scale: 0.985 }], opacity: 0.88 },
-  buttonLabel: { color: colors.white, fontFamily: typography.body, fontWeight: '800', fontSize: 15 },
-  buttonLabelDark: { color: colors.ink },
+  buttonLabel: { color: colors.ink, fontFamily: typography.body, fontWeight: '800', fontSize: 15 },
+  buttonLabelLight: { color: colors.white },
   fieldWrap: { gap: 7 },
   label: { color: colors.ink, fontFamily: typography.body, fontSize: 14, fontWeight: '800' },
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.line, borderRadius: radius.sm, paddingHorizontal: 14, color: colors.text, fontFamily: typography.body, fontSize: 16, backgroundColor: colors.white },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   pill: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   pill_mint: { backgroundColor: colors.ice },
   pill_orange: { backgroundColor: colors.clayPale },
-  pill_neutral: { backgroundColor: '#E9EEF5' },
+  pill_neutral: { backgroundColor: '#E9EFEA' },
   pill_dark: { backgroundColor: colors.ink },
   pillText: { color: colors.ink, fontFamily: typography.label, fontWeight: '700', fontSize: 10 },
   pillTextLight: { color: colors.white },
