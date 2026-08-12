@@ -3,10 +3,11 @@ import { PropsWithChildren, createContext, useCallback, useContext, useEffect, u
 
 import { DEFAULT_API_BASE_URL, fetchProducts, normalizeBaseUrl } from '@/lib/api';
 import { fallbackProducts } from '@/lib/catalog';
-import type { CartItem, Product, ProductOptions } from '@/lib/types';
+import type { CartItem, OrderSummary, Product, ProductOptions } from '@/lib/types';
 
 const CART_KEY = 'baylayer.cart.v1';
 const API_KEY = 'baylayer.apiBaseUrl.v1';
+const ORDERS_KEY = 'baylayer.orders.v1';
 
 type AppContextValue = {
   apiBaseUrl: string;
@@ -21,9 +22,13 @@ type AppContextValue = {
   cartCount: number;
   subtotalCents: number;
   addToCart: (product: Product, options?: ProductOptions, quantity?: number) => void;
+  updateCartItem: (key: string, product: Product, options: ProductOptions | undefined, quantity: number) => void;
   updateQuantity: (key: string, delta: number) => void;
   removeFromCart: (key: string) => void;
   clearCart: () => void;
+  savedOrders: OrderSummary[];
+  saveOrder: (order: OrderSummary) => void;
+  removeSavedOrder: (trackingToken: string) => void;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -52,11 +57,6 @@ function hydrateCart(value: string | null): CartItem[] {
   }
 }
 
-function mergeLiveCatalog(live: Product[]) {
-  const liveKeys = new Set(live.flatMap((product) => [product.id, product.slug]));
-  return [...live, ...fallbackProducts.filter((product) => !liveKeys.has(product.id) && !liveKeys.has(product.slug))];
-}
-
 export function AppProvider({ children }: PropsWithChildren) {
   const [apiBaseUrl, setApiBaseUrlState] = useState(DEFAULT_API_BASE_URL);
   const [products, setProducts] = useState(fallbackProducts);
@@ -64,13 +64,18 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [savedOrders, setSavedOrders] = useState<OrderSummary[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    Promise.all([AsyncStorage.getItem(API_KEY), AsyncStorage.getItem(CART_KEY)])
-      .then(([savedUrl, savedCart]) => {
+    Promise.all([AsyncStorage.getItem(API_KEY), AsyncStorage.getItem(CART_KEY), AsyncStorage.getItem(ORDERS_KEY)])
+      .then(([savedUrl, savedCart, storedOrders]) => {
         if (savedUrl) setApiBaseUrlState(savedUrl);
         setCart(hydrateCart(savedCart));
+        if (storedOrders) {
+          const parsed = JSON.parse(storedOrders) as OrderSummary[];
+          if (Array.isArray(parsed)) setSavedOrders(parsed.filter((order) => order?.trackingToken && order?.orderNumber));
+        }
       })
       .catch(() => undefined)
       .finally(() => setHydrated(true));
@@ -80,13 +85,16 @@ export function AppProvider({ children }: PropsWithChildren) {
     if (hydrated) AsyncStorage.setItem(CART_KEY, JSON.stringify(cart)).catch(() => undefined);
   }, [cart, hydrated]);
 
+  useEffect(() => {
+    if (hydrated) AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(savedOrders)).catch(() => undefined);
+  }, [savedOrders, hydrated]);
+
   const refreshCatalog = useCallback(async () => {
     setCatalogLoading(true);
     setCatalogError(null);
     try {
       const liveProducts = await fetchProducts(apiBaseUrl);
-      if (!liveProducts.length) throw new Error('The live catalog is empty.');
-      setProducts(mergeLiveCatalog(liveProducts));
+      setProducts(liveProducts);
       setCatalogSource('live');
     } catch (error) {
       setProducts(fallbackProducts);
@@ -119,19 +127,29 @@ export function AppProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
+  const updateCartItem = useCallback((key: string, product: Product, options: ProductOptions | undefined, quantity: number) => {
+    const nextKey = cartKey(product, options);
+    setCart((items) => items.map((item) => item.key === key
+      ? { key: nextKey, product, options, quantity: Math.max(product.minimumQuantity ?? 1, Math.min(100, quantity)) }
+      : item));
+  }, []);
+
   const updateQuantity = useCallback((key: string, delta: number) => setCart((items) =>
     items.map((item) => item.key === key
       ? { ...item, quantity: Math.max(item.product.minimumQuantity ?? 1, Math.min(100, item.quantity + delta)) }
       : item)), []);
   const removeFromCart = useCallback((key: string) => setCart((items) => items.filter((item) => item.key !== key)), []);
   const clearCart = useCallback(() => setCart([]), []);
+  const saveOrder = useCallback((order: OrderSummary) => setSavedOrders((orders) => [order, ...orders.filter((item) => item.trackingToken !== order.trackingToken)]), []);
+  const removeSavedOrder = useCallback((trackingToken: string) => setSavedOrders((orders) => orders.filter((order) => order.trackingToken !== trackingToken)), []);
 
   const value = useMemo(() => ({
     apiBaseUrl, setApiBaseUrl, products, catalogSource, catalogError, catalogLoading, hydrated, refreshCatalog,
     cart, cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     subtotalCents: cart.reduce((sum, item) => sum + item.product.price.amountCents * item.quantity, 0),
-    addToCart, updateQuantity, removeFromCart, clearCart,
-  }), [apiBaseUrl, setApiBaseUrl, products, catalogSource, catalogError, catalogLoading, hydrated, refreshCatalog, cart, addToCart, updateQuantity, removeFromCart, clearCart]);
+    addToCart, updateCartItem, updateQuantity, removeFromCart, clearCart,
+    savedOrders, saveOrder, removeSavedOrder,
+  }), [apiBaseUrl, setApiBaseUrl, products, catalogSource, catalogError, catalogLoading, hydrated, refreshCatalog, cart, addToCart, updateCartItem, updateQuantity, removeFromCart, clearCart, savedOrders, saveOrder, removeSavedOrder]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

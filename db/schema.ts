@@ -37,6 +37,7 @@ export const products = sqliteTable(
     attributesJson: text("attributes_json").notNull().default("{}"),
     leadTimeMinDays: integer("lead_time_min_days").notNull().default(2),
     leadTimeMaxDays: integer("lead_time_max_days").notNull().default(5),
+    minimumQuantity: integer("minimum_quantity").notNull().default(1),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     isFeatured: integer("is_featured", { mode: "boolean" })
       .notNull()
@@ -61,6 +62,10 @@ export const products = sqliteTable(
     check(
       "products_lead_time_valid",
       sql`${table.leadTimeMinDays} >= 0 AND ${table.leadTimeMaxDays} >= ${table.leadTimeMinDays}`,
+    ),
+    check(
+      "products_minimum_quantity_valid",
+      sql`${table.minimumQuantity} BETWEEN 1 AND 100`,
     ),
   ],
 );
@@ -95,6 +100,26 @@ export const uploads = sqliteTable(
       "uploads_format_allowed",
       sql`${table.format} IN ('stl', 'obj', '3mf')`,
     ),
+  ],
+);
+
+export const personalizationUploads = sqliteTable(
+  "personalization_uploads",
+  {
+    id: text("id").primaryKey(),
+    objectKey: text("object_key").notNull(),
+    accessTokenHash: text("access_token_hash").notNull(),
+    originalFilename: text("original_filename").notNull(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sha256: text("sha256").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_personalization_uploads_object_key_unique").on(table.objectKey),
+    index("idx_personalization_uploads_expires").on(table.expiresAt),
+    check("personalization_uploads_byte_size_positive", sql`${table.byteSize} > 0`),
   ],
 );
 
@@ -230,6 +255,22 @@ export const orderStatusHistory = sqliteTable(
       table.orderId,
       table.createdAt,
     ),
+  ],
+);
+
+export const paymentEvents = sqliteTable(
+  "payment_events",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull().default("stripe"),
+    eventType: text("event_type").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_payment_events_order_created").on(table.orderId, table.createdAt),
   ],
 );
 

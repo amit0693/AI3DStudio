@@ -45,10 +45,10 @@ Keep all other catalog items as research inventory or coming-soon experiments. D
 ## Supply, packing and shipping
 
 - Pilot inventory budget: $350–$450; full inventory only after demand evidence, approximately $650–$750.
-- Quote SUNLU as primary value filament, Elegoo as backup and Bambu for premium consistency; verify landed price, availability and print profile before purchase.
+- Use ELEGOO as the verified value baseline: its US store listed standard PLA at $13.99 per 1 kg and a 10 kg option at $99.99 when checked on 2026-08-11. Use Bambu as the premium/backup source; PLA Basic was $19.99 per roll with official bulk/refill offers from $13.99. Treat SUNLU as quote-only until its landed price and a sample spool are verified. Sources: [ELEGOO PLA](https://us.elegoo.com/collections/filaments/products/pla-filament-1-75mm-colored-1kg), [Bambu PLA Basic](https://us.store.bambulab.com/products/pla-basic-filament).
 - Standardize three box sizes: 8×6×4, 10×8×6 and 14×11×10 inches. Run drop and damage tests with final inserts.
-- Buy labels through Pirate Ship. Default to USPS Ground Advantage below 2 lb and compare UPS for larger parcels.
-- Offer free direct shipping at $65 and calculated shipping below it. Use local pickup for bulky planters and B2B samples.
+- Buy labels through Pirate Ship. Default to USPS Ground Advantage below 2 lb and compare UPS for larger parcels. Price-check every lane during the current temporary USPS increase; Pirate Ship reports an 8% domestic USPS increase from 2026-04-26 through 2027-01-17. Source: [Pirate Ship 2026 USPS change](https://support.pirateship.com/en/articles/14491291-april-2026-usps-time-limited-price-change).
+- Phase 1 website rule: $6.99 flat US shipping below $65 and free direct shipping at $65; use local pickup for bulky planters and B2B samples. Reprice or move to live rates if the packed-order shipping average breaches the margin gate.
 
 ## Channel sequence
 

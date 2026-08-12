@@ -35,7 +35,7 @@ export default function CompanyTracker() {
           <div><span>CEO STATUS</span><b className="live-dot">Operating</b></div>
           <strong>{overall}%</strong><small>launch-system readiness</small>
           <div className="readiness"><i style={{ width: `${overall}%` }} /></div>
-          <dl><div><dt>Active company priorities</dt><dd>3 max</dd></div><div><dt>Launch offers</dt><dd>{LAUNCH_PRODUCTS.length}</dd></div><div><dt>Execution mode</dt><dd>On demand</dd></div></dl>
+          <dl><div><dt>Active company priorities</dt><dd>3 max</dd></div><div><dt>Launch offers</dt><dd>{LAUNCH_PRODUCTS.length}</dd></div><div><dt>Execution mode</dt><dd>On demand</dd></div><div><dt>Budget mode</dt><dd>Lean</dd></div></dl>
           <p>{COMPANY_PHASE.operatingNote}</p>
         </aside>
       </section>
@@ -55,7 +55,7 @@ export default function CompanyTracker() {
         <div className="team-grid">{TEAM.map((member, index) => <article key={member.id}>
           <div className="agent-id"><span>{String(index + 1).padStart(2, "0")}</span><i className={member.status} /></div>
           <h3>{member.name}</h3><p>{member.remit}</p>
-          <footer><code>{member.id}</code><span>{member.status} · {statusLabel(member.execution)}</span></footer>
+          <footer><code>{member.id}</code><span>{member.status} · {statusLabel(member.execution)} · {member.budgetMode} budget</span></footer>
         </article>)}</div>
       </section>
 

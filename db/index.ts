@@ -5,6 +5,8 @@ import * as schema from "./schema";
 type CommerceBindings = {
   DB?: D1Database;
   UPLOADS?: R2Bucket;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
 };
 
 function bindings(): CommerceBindings {
@@ -33,4 +35,12 @@ export function getUploadsBucket(): R2Bucket {
 
 export function getDb() {
   return drizzle(getD1(), { schema });
+}
+
+export function getStripeConfig() {
+  const runtime = bindings();
+  return {
+    secretKey: runtime.STRIPE_SECRET_KEY?.trim() || null,
+    webhookSecret: runtime.STRIPE_WEBHOOK_SECRET?.trim() || null,
+  };
 }

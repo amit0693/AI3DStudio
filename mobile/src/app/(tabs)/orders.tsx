@@ -1,52 +1,59 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { Body, Button, Card, EmptyState, Eyebrow, Screen, SectionTitle, Title } from '@/components/ui';
+import { Body, Button, Card, EmptyState, Eyebrow, Pill, Screen, Title } from '@/components/ui';
 import { colors, spacing } from '@/constants/theme';
+import { useApp } from '@/context/app-context';
+import { fetchOrder, formatMoney } from '@/lib/api';
+import type { OrderDetail } from '@/lib/types';
 
 export default function OrdersScreen() {
+  const { apiBaseUrl, savedOrders, removeSavedOrder } = useApp();
+  const [details, setDetails] = useState<Record<string, OrderDetail>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!savedOrders.length) return;
+    setRefreshing(true);
+    const results = await Promise.allSettled(savedOrders.map((order) => fetchOrder(apiBaseUrl, order.trackingToken)));
+    const nextDetails: Record<string, OrderDetail> = {};
+    const nextErrors: Record<string, string> = {};
+    results.forEach((result, index) => {
+      const token = savedOrders[index].trackingToken;
+      if (result.status === 'fulfilled') nextDetails[token] = result.value;
+      else nextErrors[token] = result.reason instanceof Error ? result.reason.message : 'Order status is unavailable.';
+    });
+    setDetails(nextDetails); setErrors(nextErrors); setRefreshing(false);
+  }, [apiBaseUrl, savedOrders]);
+
+  useEffect(() => {
+    const task = setTimeout(() => void refresh(), 0);
+    return () => clearTimeout(task);
+  }, [refresh]);
+
   return (
-    <Screen>
-      <Eyebrow>Made-to-order progress</Eyebrow>
-      <Title>Your orders</Title>
-      <Body muted>Track production and delivery here after checkout is connected.</Body>
-      <EmptyState
-        title="No orders yet"
-        message="This preview never invents order data or collects payment details. Products in your cart remain saved locally."
-        action={<Button label="Browse the shop" onPress={() => router.navigate('/shop')} />}
-      />
-      <SectionTitle>What happens after you order</SectionTitle>
-      <Card>
-        <Timeline number="1" title="Details reviewed" text="We confirm personalization, scale, material, and printability." />
-        <Timeline number="2" title="Printing & finishing" text="Your item is printed in a small batch, cleaned, and assembled if needed." />
-        <Timeline number="3" title="Quality check" text="A person checks finish, fit, personalization, and packaging." />
-        <Timeline number="4" title="Ready or shipped" text="Pickup or tracking information appears only after it is verified." last />
-      </Card>
-      <Card style={styles.help}>
-        <Text accessibilityRole="header" style={styles.helpTitle}>Need help with an existing order?</Text>
-        <Body muted>Use the confirmation email from your verified checkout. Order support is not connected to this preview app yet.</Body>
-      </Card>
+    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.action} />}>
+      <Eyebrow>Made-to-order progress</Eyebrow><Title>Your orders</Title><Body muted>Pull to refresh payment, production, and delivery updates verified by the store.</Body>
+      {!savedOrders.length ? <EmptyState title="No orders saved" message="Orders created on this device appear here with their verified status." action={<Button label="Browse the shop" onPress={() => router.navigate('/shop')} />} /> : null}
+      {savedOrders.map((saved) => {
+        const order = details[saved.trackingToken];
+        const error = errors[saved.trackingToken];
+        return <Card key={saved.trackingToken} style={error ? styles.failed : undefined}>
+          <View style={styles.header}><View style={styles.headerCopy}><Text style={styles.number}>{order?.orderNumber ?? saved.orderNumber}</Text><Text style={styles.date}>{new Date(order?.createdAt ?? saved.createdAt).toLocaleDateString()}</Text></View><Pill tone={order?.paymentStatus === 'paid' ? 'mint' : 'neutral'}>{pretty(order?.paymentStatus ?? saved.paymentStatus)}</Pill></View>
+          <View style={styles.totalRow}><Text style={styles.status}>{pretty(order?.status ?? saved.status)}</Text><Text style={styles.total}>{formatMoney(order?.amounts.totalCents ?? saved.amounts.totalCents, order?.amounts.currency ?? saved.amounts.currency)}</Text></View>
+          {order?.items.map((item) => <View key={item.id} style={styles.item}><Text style={styles.itemName}>{item.quantity} × {item.name}</Text><Text style={styles.itemPrice}>{formatMoney(item.lineTotalCents, order.amounts.currency)}</Text></View>)}
+          {order?.timeline.length ? <View style={styles.timeline}>{order.timeline.map((event, index) => <View key={`${event.status}-${event.createdAt}-${index}`} style={styles.event}><View style={styles.dot} /><View style={styles.eventCopy}><Text style={styles.eventTitle}>{pretty(event.status)}</Text>{event.note ? <Body muted>{event.note}</Body> : null}<Text style={styles.eventDate}>{new Date(event.createdAt).toLocaleString()}</Text></View></View>)}</View> : null}
+          {error ? <><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Body muted>This saved reference may be expired, removed, or the store may be temporarily unavailable.</Body><Button label="Retry" variant="secondary" compact onPress={() => void refresh()} /><Button label="Forget this order" variant="ghost" compact onPress={() => removeSavedOrder(saved.trackingToken)} /></> : null}
+        </Card>;
+      })}
     </Screen>
   );
 }
 
-function Timeline({ number, title, text, last = false }: { number: string; title: string; text: string; last?: boolean }) {
-  return (
-    <View style={styles.timeline}>
-      <View style={styles.markerWrap}><View style={styles.marker}><Text style={styles.markerText}>{number}</Text></View>{!last ? <View style={styles.line} /> : null}</View>
-      <View style={styles.timelineCopy}><Text style={styles.timelineTitle}>{title}</Text><Body muted>{text}</Body></View>
-    </View>
-  );
-}
+function pretty(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 const styles = StyleSheet.create({
-  timeline: { flexDirection: 'row', gap: spacing.md },
-  markerWrap: { alignItems: 'center', width: 36 },
-  marker: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.ice, alignItems: 'center', justifyContent: 'center' },
-  markerText: { color: colors.ink, fontWeight: '900' },
-  line: { width: 2, flex: 1, minHeight: 40, backgroundColor: colors.line },
-  timelineCopy: { flex: 1, paddingBottom: spacing.md, gap: 3 },
-  timelineTitle: { color: colors.ink, fontWeight: '900', fontSize: 16 },
-  help: { backgroundColor: colors.icePale },
-  helpTitle: { color: colors.ink, fontSize: 20, fontWeight: '900' },
+  failed: { borderColor: colors.danger }, header: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, alignItems: 'flex-start' }, headerCopy: { flex: 1, gap: 2 }, number: { color: colors.ink, fontSize: 18, fontWeight: '900' }, date: { color: colors.muted, fontSize: 12 }, totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md }, status: { color: colors.actionDark, fontWeight: '900' }, total: { color: colors.ink, fontSize: 24, fontWeight: '900' }, item: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: spacing.sm }, itemName: { color: colors.text, flex: 1 }, itemPrice: { color: colors.ink, fontWeight: '800' }, timeline: { gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: spacing.md }, event: { flexDirection: 'row', gap: spacing.sm }, dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.action, marginTop: 6 }, eventCopy: { flex: 1 }, eventTitle: { color: colors.ink, fontWeight: '900' }, eventDate: { color: colors.muted, fontSize: 11, marginTop: 3 }, error: { color: colors.danger, fontWeight: '800' },
 });

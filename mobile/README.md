@@ -1,6 +1,6 @@
 # BayLayer Labs mobile
 
-Shared Expo/React Native storefront for iOS and Android. The app includes a complete 3D-print catalog, personalization options, an on-device cart, order-status boundaries, and server-verified STL estimates.
+Shared Expo/React Native storefront for iOS and Android. The app includes the focused eight-product launch catalog, schema-driven personalization, an editable on-device cart, hosted Stripe Checkout, persisted order tracking, and server-verified STL estimates.
 
 ## Customer navigation
 
@@ -9,8 +9,8 @@ The five bottom tabs are:
 1. **Home** — flagship product, benefits, best sellers, categories, and customization overview.
 2. **Shop** — search, category chips, personalization/material/price filters, sorting, and product cards.
 3. **Customize** — personalized-product discovery and the STL quote uploader.
-4. **Orders** — honest empty state and an explanation of the future production timeline.
-5. **Cart** — persisted product options, quantities, subtotal, and checkout boundaries.
+4. **Orders** — persisted order references with verified payment, production, and delivery timelines.
+5. **Cart** — persisted product options, file selections, quantities, editing, and secure checkout.
 
 Settings is intentionally outside the five tabs. Open it from the account icon in any tab header. The search icon opens Shop.
 
@@ -42,20 +42,20 @@ npx expo export --platform android --output-dir dist-android
 
 ## Catalog and product imagery
 
-- `src/lib/catalog.ts` contains the complete bundled catalog and is available offline.
-- A successful live API response is merged with the bundled catalog so live products and pricing can coexist with the complete launch range.
-- Eight flagship products use local imagery in `assets/products/`.
-- Every other product has an accessible category-specific visual fallback; the app does not depend on remote images.
+- `src/lib/catalog.ts` contains exactly the eight launch products and is available offline.
+- A successful live API response is authoritative, so products deactivated on the server do not reappear from the fallback catalog.
+- Products use available local imagery in `assets/products/` and an accessible category-specific fallback when no local asset exists.
+- The offline launch catalog does not depend on remote images.
 
 ## Privacy and security boundaries
 
 - API configuration is stored locally with AsyncStorage; never enter a secret or access token.
 - The app does not request camera or broad photo-library access.
-- Personalization images are selected through the system document picker and remain local while building the cart.
+- Personalization files are selected through the system document picker, remain local while building the cart, and upload to durable private storage only when checkout starts.
 - An STL is copied into the app cache by the system document picker, then sent only when the customer taps **Calculate estimate**.
-- Cart contents and customization filenames are stored on the device. Image bytes and payment details are not stored in the cart.
-- Checkout, production ordering, and order history are intentionally disabled until verified backend flows exist.
+- Cart contents and local file references are stored on the device. Payment details are entered only on Stripe's hosted checkout.
+- Public order tracking tokens are stored on-device and used to retrieve verified status from the backend.
 
 ## Publication
 
-No App Store or Play Store release has been created. Before store submission, configure the team's Expo/EAS project, signing credentials, privacy declarations, screenshots, support URL, production API access, verified checkout, and backend fulfillment/webhook handling.
+`eas.json` and build/submit scripts contain no project, account, or credential IDs. Before store submission, configure the team's Expo/EAS project, signing credentials, privacy declarations, screenshots, support URL, production API access, Stripe secrets/webhook, and final store metadata.

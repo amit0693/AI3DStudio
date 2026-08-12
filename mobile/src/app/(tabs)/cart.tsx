@@ -33,7 +33,7 @@ export default function CartScreen() {
           <Card style={styles.shipping}>
             <Text style={styles.shippingTitle}>{shippingRemaining ? `${formatMoney(shippingRemaining)} away from free shipping` : 'You unlocked free shipping'}</Text>
             <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
-            <Body muted>Estimated shipping offer applies to eligible US orders after checkout is connected.</Body>
+            <Body muted>US shipping is $6.99 below $65 and free at $65; tax is calculated in hosted checkout.</Body>
           </Card>
           <Body muted>{cartCount} item{cartCount === 1 ? '' : 's'} ready for review.</Body>
           {cart.map(({ key, product, quantity, options }) => (
@@ -45,8 +45,8 @@ export default function CartScreen() {
                   <Text style={styles.price}>{formatMoney(product.price.amountCents)} each</Text>
                   {options?.color ? <Text style={styles.option}>Color: {options.color}</Text> : null}
                   {options?.material ? <Text style={styles.option}>Material: {options.material}</Text> : null}
-                  {options?.personalization ? <Text numberOfLines={2} style={styles.option}>Text: {options.personalization}</Text> : null}
-                  {options?.uploadName ? <Text numberOfLines={1} style={styles.option}>File: {options.uploadName}</Text> : null}
+                  {Object.entries(options?.values ?? {}).map(([label, value]) => <Text key={label} numberOfLines={2} style={styles.option}>{label}: {value}</Text>)}
+                  {Object.entries(options?.files ?? {}).map(([label, file]) => <Text key={label} numberOfLines={1} style={styles.option}>{label}: {file.name}</Text>)}
                 </View>
               </View>
               <View style={styles.lineRow}>
@@ -57,6 +57,7 @@ export default function CartScreen() {
                 </View>
                 <Text style={styles.lineTotal}>{formatMoney(product.price.amountCents * quantity)}</Text>
               </View>
+              <Button label="Edit selections" variant="secondary" compact onPress={() => router.push({ pathname: '/product/[slug]', params: { slug: product.slug, editKey: key } })} />
               <Button label="Remove item" variant="ghost" compact onPress={() => removeFromCart(key)} />
             </Card>
           ))}
@@ -66,8 +67,8 @@ export default function CartScreen() {
             <View style={styles.summaryRow}><Text style={styles.summaryMuted}>Shipping</Text><Text style={styles.summaryMuted}>Calculated later</Text></View>
             <View style={styles.summaryRow}><Text style={styles.summaryMuted}>Sales tax</Text><Text style={styles.summaryMuted}>Calculated later</Text></View>
           </Card>
-          <Button label="Checkout coming soon" onPress={() => undefined} disabled accessibilityHint="Payments are not available in this preview" />
-          <Body muted style={styles.center}>No payment information is collected. A verified checkout and backend fulfillment flow must be connected before launch.</Body>
+          <Button label="Secure checkout" onPress={() => router.push('/checkout')} accessibilityHint="Enter delivery details and continue to hosted payment" />
+          <Body muted style={styles.center}>Payment is completed in Stripe’s hosted checkout. BayLayer does not collect card details in this app.</Body>
           <Button label="Continue shopping" variant="secondary" onPress={() => router.navigate('/shop')} />
           <Button label="Clear cart" variant="ghost" onPress={confirmClear} />
         </>

@@ -43,7 +43,13 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npx expo-doctor"
+    "check": "npm run lint && npm run typecheck && npx expo-doctor",
+    "export:ios": "expo export --platform ios --output-dir dist-ios",
+    "export:android": "expo export --platform android --output-dir dist-android",
+    "build:ios": "npx eas-cli build --platform ios --profile production",
+    "build:android": "npx eas-cli build --platform android --profile production",
+    "submit:ios": "npx eas-cli submit --platform ios --profile production",
+    "submit:android": "npx eas-cli submit --platform android --profile production"
   },
   "private": true
 }

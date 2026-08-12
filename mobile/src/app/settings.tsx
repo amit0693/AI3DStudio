@@ -58,7 +58,7 @@ export default function SettingsScreen() {
       </Card>
       <Card>
         <Text style={styles.heading}>Privacy by default</Text>
-        <Body muted>Cart and app settings stay on this device. Product photos and STL files are uploaded only after you deliberately choose them. No payment data or camera access is collected in this preview.</Body>
+        <Body muted>Cart, order references, and app settings stay on this device. Personalization files upload only when you start checkout, and STL files upload only when you request an estimate. Card details are entered only on Stripe’s hosted page.</Body>
         <Body muted>Version 1.1.0 · {Platform.OS === 'android' ? 'Android package' : 'iOS bundle'} com.baylayerlabs.mobile</Body>
       </Card>
     </Screen>

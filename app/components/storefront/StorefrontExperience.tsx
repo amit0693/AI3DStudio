@@ -1,11 +1,96 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
 import { LAUNCH_COLLECTIONS, type Collection, type Product, LAUNCH_PRODUCTS } from "@/app/data/catalog";
+import styles from "./StorefrontExperience.module.css";
 
-type CartItem = { product: Product; quantity: number; color: string; personalization?: string };
+type CustomizationField = {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "date" | "url" | "file";
+  required?: boolean;
+  maxLength?: number;
+  options?: string[];
+  accept?: string;
+  hint?: string;
+};
+
+type CartItem = {
+  id: string;
+  product: Product;
+  quantity: number;
+  color: string;
+  options: Record<string, string>;
+  files: Record<string, File>;
+  rightsConfirmed: boolean;
+};
+
+type CheckoutDetails = {
+  name: string;
+  email: string;
+  phone: string;
+  fulfillmentMethod: "pickup" | "shipping";
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+};
+
 type SortKey = "featured" | "best" | "new" | "low" | "high" | "fast";
+
+const CUSTOMIZATION_SCHEMAS: Record<string, CustomizationField[]> = {
+  "PG-01": [
+    { key: "photo", label: "Photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "JPG, PNG, or WebP. The file stays on this device until secure upload at checkout." },
+    { key: "orientation", label: "Orientation", type: "select", required: true, options: ["Portrait", "Landscape"] },
+    { key: "caption", label: "Short caption", type: "text", maxLength: 60, hint: "Optional; we will proof it before printing." },
+  ],
+  "PG-05": [
+    { key: "photo", label: "Pet photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "Use a clear side-profile photo when possible." },
+    { key: "petName", label: "Pet name", type: "text", required: true, maxLength: 40 },
+    { key: "memorialLine", label: "Memorial line", type: "text", maxLength: 80, hint: "Optional" },
+  ],
+  "PD-01": [
+    { key: "size", label: "Size", type: "select", required: true, options: ["Small", "Medium"] },
+    { key: "drainage", label: "Inner pot", type: "select", required: true, options: ["Standard wick", "Extra drainage"] },
+  ],
+  "GH-04": [
+    { key: "bottleDiameter", label: "Bottle diameter", type: "select", required: true, options: ["25 mm", "32 mm", "36 mm"] },
+    { key: "layout", label: "Layout", type: "select", required: true, options: ["Straight", "Corner"] },
+  ],
+  "SE-04": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 40 },
+    { key: "role", label: "Role or room", type: "text", maxLength: 60, hint: "Optional" },
+  ],
+  "BE-01": [
+    { key: "names", label: "Guest names", type: "textarea", required: true, maxLength: 2000, hint: "One name per line. Minimum order: 20 pieces." },
+    { key: "eventDate", label: "Event date", type: "date", required: true },
+  ],
+  "BE-03": [
+    { key: "businessName", label: "Business name", type: "text", required: true, maxLength: 60 },
+    { key: "destinationUrl", label: "QR destination URL", type: "url", required: true, maxLength: 160, hint: "We test the final scan before production." },
+    { key: "logo", label: "Approved logo", type: "file", accept: "image/jpeg,image/png,image/webp", hint: "Optional" },
+    { key: "nfc", label: "NFC option", type: "select", required: true, options: ["QR only", "QR + NFC"] },
+  ],
+  "CP-02": [
+    { key: "partDescription", label: "Part and use", type: "textarea", required: true, maxLength: 1000 },
+    { key: "dimensions", label: "Measurements", type: "text", required: true, maxLength: 200, hint: "Include units, for example 42 × 18 × 6 mm." },
+    { key: "reference", label: "Reference photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "Required. Safety-critical parts are not accepted." },
+  ],
+};
+
+const EMPTY_CHECKOUT: CheckoutDetails = {
+  name: "",
+  email: "",
+  phone: "",
+  fulfillmentMethod: "pickup",
+  line1: "",
+  line2: "",
+  city: "",
+  state: "CA",
+  postalCode: "",
+};
 
 const RECIPIENTS: Array<[string, Collection]> = [
   ["Plant lovers", "Plants & Decor"], ["Gamers", "Gaming & Hobbies"],
@@ -35,6 +120,76 @@ function ProductImage({ product, small = false }: { product: Product; small?: bo
   );
 }
 
+function initialOptions(product: Product) {
+  return Object.fromEntries(
+    (CUSTOMIZATION_SCHEMAS[product.id] ?? []).map((field) => [
+      field.key,
+      field.type === "select" ? field.options?.[0] ?? "" : "",
+    ]),
+  );
+}
+
+function itemOptionSummary(item: CartItem) {
+  const labels = new Map(
+    (CUSTOMIZATION_SCHEMAS[item.product.id] ?? []).map((field) => [field.key, field.label]),
+  );
+  return Object.entries(item.options)
+    .filter(([, value]) => value)
+    .map(([key, value]) => `${labels.get(key) ?? key}: ${value}`);
+}
+
+function hasPendingProductFile(item: CartItem) {
+  return (CUSTOMIZATION_SCHEMAS[item.product.id] ?? []).some(
+    (field) => field.type === "file" && Boolean(item.options[field.key]),
+  );
+}
+
+function CustomizationControl({
+  field,
+  value,
+  error,
+  onValue,
+  onFile,
+}: {
+  field: CustomizationField;
+  value: string;
+  error?: string;
+  onValue: (value: string) => void;
+  onFile: (file: File | null) => void;
+}) {
+  const id = `custom-${field.key}`;
+  const common = {
+    id,
+    required: field.required,
+    value,
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => onValue(event.target.value),
+    "aria-invalid": Boolean(error),
+    "aria-describedby": `${id}-help`,
+  };
+  return (
+    <label className={styles.customField} htmlFor={id}>
+      <span>{field.label}{field.required ? " *" : ""}</span>
+      {field.type === "textarea" ? <textarea {...common} maxLength={field.maxLength} rows={4} />
+        : field.type === "select" ? <select {...common}>{field.options?.map((option) => <option key={option}>{option}</option>)}</select>
+          : field.type === "file" ? <input
+              id={id}
+              type="file"
+              required={field.required && !value}
+              accept={field.accept}
+              aria-invalid={Boolean(error)}
+              aria-describedby={`${id}-help`}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                onFile(file);
+                onValue(file?.name ?? "");
+              }}
+            />
+            : <input {...common} type={field.type} maxLength={field.maxLength} />}
+      <small id={`${id}-help`} className={error ? styles.fieldError : undefined}>{error || field.hint || (field.maxLength ? `${value.length}/${field.maxLength}` : "")}</small>
+    </label>
+  );
+}
+
 export function StorefrontExperience() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -47,9 +202,16 @@ export function StorefrontExperience() {
   const [personalizedOnly, setPersonalizedOnly] = useState(false);
   const [fastOnly, setFastOnly] = useState(false);
   const [detailColor, setDetailColor] = useState("");
-  const [detailText, setDetailText] = useState("");
+  const [detailOptions, setDetailOptions] = useState<Record<string, string>>({});
+  const [detailFiles, setDetailFiles] = useState<Record<string, File>>({});
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
   const [detailRights, setDetailRights] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [checkout, setCheckout] = useState<CheckoutDetails>(EMPTY_CHECKOUT);
+  const [checkoutPending, setCheckoutPending] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutMessage, setCheckoutMessage] = useState("");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -57,18 +219,49 @@ export function StorefrontExperience() {
   const [pending, setPending] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const detailCloseRef = useRef<HTMLButtonElement>(null);
+  const checkoutAttemptRef = useRef({ signature: "", key: "" });
 
   useEffect(() => {
     const saved = window.localStorage.getItem("baylayer-cart-v2");
     if (saved) {
       try {
-        const restored = JSON.parse(saved) as CartItem[];
-        const launchIds = new Set(LAUNCH_PRODUCTS.map((product) => product.id));
-        window.setTimeout(() => setCart(restored.filter((item) => launchIds.has(item.product.id))), 0);
+        const restored = JSON.parse(saved) as Array<Partial<CartItem>>;
+        const launchById = new Map(LAUNCH_PRODUCTS.map((product) => [product.id, product]));
+        const safeItems = restored.flatMap((item) => {
+          if (!item.product) return [];
+          const product = launchById.get(item.product.id);
+          if (!product) return [];
+          const schema = CUSTOMIZATION_SCHEMAS[product.id] ?? [];
+          const allowed = new Set(schema.map((field) => field.key));
+          const restoredOptions = { ...initialOptions(product), ...Object.fromEntries(Object.entries(item.options ?? {}).filter(([key]) => allowed.has(key))) };
+          for (const field of schema) {
+            if (field.type === "file") restoredOptions[field.key] = "";
+          }
+          return [{
+            id: item.id ?? crypto.randomUUID(),
+            product,
+            quantity: Math.max(product.minimum ?? 1, Number(item.quantity) || product.minimum || 1),
+            color: item.color ?? product.colors[0] ?? "",
+            options: restoredOptions,
+            files: {},
+            rightsConfirmed: false,
+          } satisfies CartItem];
+        });
+        window.setTimeout(() => setCart(safeItems), 0);
       } catch { /* keep an empty cart */ }
     }
   }, []);
-  useEffect(() => { window.localStorage.setItem("baylayer-cart-v2", JSON.stringify(cart)); }, [cart]);
+  useEffect(() => {
+    const persisted = cart.map((item) => ({
+      id: item.id,
+      product: item.product,
+      quantity: item.quantity,
+      color: item.color,
+      options: item.options,
+      rightsConfirmed: item.rightsConfirmed,
+    }));
+    window.localStorage.setItem("baylayer-cart-v2", JSON.stringify(persisted));
+  }, [cart]);
   useEffect(() => {
     document.body.style.overflow = menuOpen || cartOpen || selected ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -108,38 +301,194 @@ export function StorefrontExperience() {
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const selectedSchema = selected ? CUSTOMIZATION_SCHEMAS[selected.id] ?? [] : [];
+  const selectedHasFile = selectedSchema.some((field) => field.type === "file" && Boolean(detailOptions[field.key]));
+  const cartHasPendingFiles = cart.some(hasPendingProductFile);
 
   function chooseCollection(next: Collection) {
     setCollection(next); setMenuOpen(false);
     requestAnimationFrame(() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }));
   }
 
+  function clearCheckoutNotices() {
+    setCheckoutError("");
+    setCheckoutMessage("");
+  }
+
   function openProduct(product: Product) {
+    clearCheckoutNotices();
     setDetailColor(product.colors[0] ?? "");
-    setDetailText("");
+    setDetailOptions(initialOptions(product));
+    setDetailFiles({});
+    setDetailErrors({});
     setDetailRights(false);
+    setEditingLineId(null);
     setSelected(product);
   }
 
-  function add(product: Product, color = product.colors[0] ?? "", personalization = "") {
-    if (product.price === 0) { document.getElementById("custom-print")?.scrollIntoView({ behavior: "smooth" }); setSelected(null); return; }
+  function editCartLine(item: CartItem) {
+    clearCheckoutNotices();
+    setDetailColor(item.color);
+    setDetailOptions(item.options);
+    setDetailFiles(item.files);
+    setDetailErrors({});
+    setDetailRights(item.rightsConfirmed);
+    setEditingLineId(item.id);
+    setCartOpen(false);
+    setSelected(item.product);
+  }
+
+  function validateCustomization(product: Product) {
+    const errors: Record<string, string> = {};
+    for (const field of CUSTOMIZATION_SCHEMAS[product.id] ?? []) {
+      const value = detailOptions[field.key]?.trim() ?? "";
+      if (field.required && !value) errors[field.key] = `${field.label} is required.`;
+      if (field.maxLength && value.length > field.maxLength) errors[field.key] = `${field.label} is too long.`;
+      if (field.type === "url" && value) {
+        try {
+          const parsed = new URL(value);
+          if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
+        } catch {
+          errors[field.key] = "Enter a complete http:// or https:// URL.";
+        }
+      }
+    }
+    const hasFile = (CUSTOMIZATION_SCHEMAS[product.id] ?? []).some(
+      (field) => field.type === "file" && Boolean(detailOptions[field.key]),
+    );
+    if (hasFile && !detailRights) errors.rights = "Confirm that you have permission to use each selected file.";
+    setDetailErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function add(product: Product) {
+    if (product.price === 0) {
+      document.getElementById("custom-print")?.scrollIntoView({ behavior: "smooth" });
+      setSelected(null);
+      return;
+    }
+    if (!validateCustomization(product)) return;
+    clearCheckoutNotices();
     const minimum = product.minimum ?? 1;
+    const normalizedOptions = Object.fromEntries(
+      Object.entries(detailOptions).map(([key, value]) => [key, value.trim()]),
+    );
+    if (editingLineId) {
+      setCart((items) => items.map((item) => item.id === editingLineId
+        ? { ...item, color: detailColor, options: normalizedOptions, files: detailFiles, rightsConfirmed: detailRights, quantity: Math.max(minimum, item.quantity) }
+        : item));
+      setEditingLineId(null);
+      setSelected(null);
+      setCartOpen(true);
+      return;
+    }
     setCart((items) => {
-      const match = items.find((item) => item.product.id === product.id && item.color === color && item.personalization === personalization);
+      const signature = JSON.stringify(normalizedOptions);
+      const match = items.find((item) => item.product.id === product.id && item.color === detailColor && JSON.stringify(item.options) === signature);
       return match
         ? items.map((item) => item === match ? { ...item, quantity: item.quantity + minimum } : item)
-        : [...items, { product, quantity: minimum, color, personalization }];
+        : [...items, {
+            id: crypto.randomUUID(),
+            product,
+            quantity: minimum,
+            color: detailColor,
+            options: normalizedOptions,
+            files: detailFiles,
+            rightsConfirmed: detailRights,
+          }];
     });
     setSelected(null); setCartOpen(true);
   }
 
-  function changeQuantity(index: number, delta: number) {
-    setCart((items) => items.flatMap((item, i) => {
-      if (i !== index) return [item];
-      const nextQuantity = item.quantity + delta;
+  function changeQuantity(id: string, delta: number) {
+    clearCheckoutNotices();
+    setCart((items) => items.map((item) => {
+      if (item.id !== id) return item;
       const minimum = item.product.minimum ?? 1;
-      return nextQuantity < minimum ? [] : [{ ...item, quantity: nextQuantity }];
+      return { ...item, quantity: Math.max(minimum, Math.min(100, item.quantity + delta)) };
     }));
+  }
+
+  function removeCartLine(id: string) {
+    clearCheckoutNotices();
+    setCart((items) => items.filter((item) => item.id !== id));
+  }
+
+  async function submitCheckout(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCheckoutError("");
+    setCheckoutMessage("");
+    setCheckoutPending(true);
+    try {
+      const preparedItems = [];
+      for (const item of cart) {
+        const personalization: Record<string, string | boolean> = { color: item.color, ...item.options };
+        for (const [fieldKey, file] of Object.entries(item.files)) {
+          const uploadForm = new FormData();
+          uploadForm.append("file", file);
+          const uploadResponse = await fetch("/api/personalization-uploads", { method: "POST", body: uploadForm });
+          const uploadResult = await uploadResponse.json() as {
+            error?: string;
+            upload?: { id: string; accessToken: string; filename: string };
+          };
+          if (!uploadResponse.ok || !uploadResult.upload) {
+            throw new Error(uploadResult.error || `We could not securely upload ${file.name}.`);
+          }
+          personalization[fieldKey] = uploadResult.upload.id;
+          personalization[`${fieldKey}Token`] = uploadResult.upload.accessToken;
+        }
+        if (Object.keys(item.files).length > 0) personalization.rightsConfirmed = item.rightsConfirmed;
+        preparedItems.push({
+          productId: item.product.id,
+          quantity: Math.max(item.product.minimum ?? 1, item.quantity),
+          personalization,
+        });
+      }
+
+      const body = {
+        name: checkout.name.trim(),
+        email: checkout.email.trim(),
+        phone: checkout.phone.trim() || undefined,
+        fulfillmentMethod: checkout.fulfillmentMethod,
+        shippingAddress: checkout.fulfillmentMethod === "shipping" ? {
+          line1: checkout.line1.trim(),
+          line2: checkout.line2.trim() || undefined,
+          city: checkout.city.trim(),
+          state: checkout.state.trim().toUpperCase(),
+          postalCode: checkout.postalCode.trim(),
+          country: "US",
+        } : undefined,
+        items: preparedItems,
+      };
+      const signature = JSON.stringify({ ...body, items: cart.map((item) => ({ id: item.id, quantity: item.quantity, options: item.options })) });
+      if (checkoutAttemptRef.current.signature !== signature) {
+        checkoutAttemptRef.current = { signature, key: crypto.randomUUID() };
+      }
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": checkoutAttemptRef.current.key,
+        },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json() as {
+        error?: string;
+        order?: { orderNumber?: string; trackingToken?: string };
+        checkout?: { available?: boolean; url?: string; message?: string };
+      };
+      if (!response.ok) throw new Error(result.error || "We could not prepare this order.");
+      if (result.checkout?.url) {
+        window.location.assign(result.checkout.url);
+        return;
+      }
+      const orderLabel = result.order?.orderNumber ? `Order request ${result.order.orderNumber} was saved. ` : "Your order request was saved. ";
+      setCheckoutMessage(`${orderLabel}${result.checkout?.message || "Payment is not configured, so no payment details were collected."}`);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "We could not prepare this order.");
+    } finally {
+      setCheckoutPending(false);
+    }
   }
 
   async function joinWaitlist(event: FormEvent<HTMLFormElement>) {
@@ -218,11 +567,11 @@ export function StorefrontExperience() {
 
         <section className="recipient-section"><div className="section-heading"><div><p className="eyebrow"><span /> SHOP BY PERSON</p><h2>A useful gift feels<br /><em>more personal.</em></h2></div></div><div className="recipient-grid">{RECIPIENTS.map(([label, target], index) => <button key={label} type="button" className={`recipient-card recipient-${index}`} onClick={() => chooseCollection(target)}><span>For</span><strong>{label}</strong><i>Explore →</i></button>)}</div></section>
 
-        <section className="reviews"><p className="eyebrow light"><span /> MADE FOR REAL LIFE</p><blockquote>“The preview made ordering easy, and the final light felt more detailed than I expected. It was the gift everyone wanted to see.”</blockquote><div><strong>Jamie R.</strong><span>Verified photo-light customer · Oakland</span></div><div className="review-points"><span>4.9 average rating</span><span>Real photo proofs</span><span>Human support</span></div></section>
+        <section className="reviews"><p className="eyebrow light"><span /> PILOT PROMISE</p><blockquote>Useful products, clear limits, and a human review before personalized work reaches the printer.</blockquote><div><strong>BayLayer Labs</strong><span>Eight focused launch offers · Bay Area</span></div><div className="review-points"><span>No fabricated ratings</span><span>File rights confirmed</span><span>Human support</span></div></section>
 
         <section className="custom-section" id="custom-print"><div className="custom-copy"><p className="eyebrow light"><span /> CUSTOM PRINT STUDIO</p><h2>Your file.<br /><em>Made physical.</em></h2><p>Have an STL ready? Get a geometry-based planning estimate, then a human printability review. We do not accept weapons, medical devices, safety-critical parts, or unauthorized designs.</p><ul><li><span>01</span> Upload an STL</li><li><span>02</span> Pick material & finish</li><li><span>03</span> Review before paying</li></ul></div><QuoteBuilder className="quote-builder-shell" heading="Estimate your STL" /></section>
 
-        <section className="business-section" id="business"><div><p className="eyebrow"><span /> BUSINESS & EVENTS</p><h2>Small batches.<br /><em>Big impression.</em></h2><p>Branded counter signs, event place names, display stands, and repeatable production—without a factory-sized minimum.</p><button type="button" className="button button-dark" onClick={() => chooseCollection("Business & Events")}>Shop business & events</button></div><div className="stat-grid"><span><strong>10+</strong> quantity pricing begins</span><span><strong>1</strong> digital proof included</span><span><strong>25%</strong> rush production option</span><span><strong>100%</strong> logo rights confirmed</span></div></section>
+        <section className="business-section" id="business"><div><p className="eyebrow"><span /> BUSINESS & EVENTS</p><h2>Small batches.<br /><em>Big impression.</em></h2><p>Branded counter signs and event place names with clear minimums, customer-approved files, and human review before production.</p><button type="button" className="button button-dark" onClick={() => chooseCollection("Business & Events")}>Shop business & events</button></div><div className="stat-grid"><span><strong>20</strong> place-name minimum</span><span><strong>1</strong> review before production</span><span><strong>US</strong> pickup and shipping</span><span><strong>100%</strong> logo rights confirmed</span></div></section>
 
         <section className="materials" id="story"><div className="section-heading"><div><p className="eyebrow"><span /> MATERIALS & CARE</p><h2>Designed honestly.<br /><em>Cared for simply.</em></h2></div></div><div className="material-grid"><article><span>PLA</span><h3>Crisp detail for indoors</h3><p>Ideal for gifts and desk pieces. Keep away from high heat, dishwashers, and hot cars.</p></article><article><span>PETG</span><h3>Tougher around water</h3><p>Our choice for planters, bathrooms, and practical parts. Hand wash with cool water.</p></article><article><span>TPU</span><h3>Flexible where it helps</h3><p>Used for feet, cable clips, and protective contact points that need some give.</p></article></div></section>
 
@@ -233,9 +582,72 @@ export function StorefrontExperience() {
 
       <footer><div className="footer-main"><div><a className="brand inverse" href="#top"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a><p>Useful, personalized objects made close to home.</p><span>Bay Area, California</span></div><nav aria-label="Footer shop"><strong>Shop</strong>{LAUNCH_COLLECTIONS.slice(0,5).map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}</button>)}</nav><nav aria-label="Footer help"><strong>Help</strong><a href="#how-it-works">How it works</a><a href="/company">Company tracker</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div><div className="footer-bottom"><span>© 2026 BayLayer Labs</span><span>Ideas, made local.</span></div></footer>
 
-      {selected && <div className="modal-layer"><button className="drawer-backdrop" type="button" aria-label="Close product details" onClick={() => setSelected(null)} /><section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title"><button ref={detailCloseRef} className="modal-close" type="button" aria-label="Close product details" onClick={() => setSelected(null)}>×</button><div className="detail-gallery"><ProductImage product={selected} /><div className="thumbs"><ProductImage product={selected} small /><span>Details</span><span>In use</span><span>Scale</span></div></div><div className="detail-copy"><p className="eyebrow"><span /> {selected.collection}</p><h2 id="detail-title">{selected.name}</h2><p className="detail-price">{selected.priceLabel ?? (selected.price === 0 ? "Custom quote" : `From ${money(selected.price)}`)}</p><p>{selected.description}</p><div className="delivery-note"><strong>Made to order</strong><span>Estimated production: {selected.productionDays} business days</span></div><fieldset><legend>Color · <b>{detailColor}</b></legend><div className="detail-swatches">{selected.colors.map((color) => <button className={detailColor === color ? "active" : ""} aria-label={`Choose ${color}`} title={color} type="button" key={color} onClick={() => setDetailColor(color)}><i className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} /></button>)}</div></fieldset>{selected.personalized && <label className="personalize-field"><span>Personalization <small>Optional · up to 60 characters</small></span><input maxLength={60} value={detailText} onChange={(e) => setDetailText(e.target.value)} placeholder={selected.id.startsWith("PG-01") ? "Add a short caption" : "Enter names, wording, or instructions"} /><small>{detailText.length}/60 · We’ll confirm complex details before printing.</small></label>}<dl className="detail-facts"><div><dt>Material</dt><dd>{selected.material}</dd></div><div><dt>Included</dt><dd>Finished print + care card</dd></div><div><dt>Care</dt><dd>Cool water, hand clean only</dd></div></dl>{selected.safety && <p className="safety-note">Safety: {selected.safety}</p>}{selected.personalized && <label className="rights-check"><input type="checkbox" checked={detailRights} onChange={(event) => setDetailRights(event.target.checked)} /> I own or have permission to use any photo, logo, or design I provide.</label>}<button className="button button-dark detail-add" disabled={Boolean(selected.personalized && !detailRights)} type="button" onClick={() => add(selected, detailColor, detailText)}>{selected.price === 0 ? "Start custom quote" : `Add to bag · ${money(selected.price * (selected.minimum ?? 1))}`}</button></div></section></div>}
+      {selected && <div className="modal-layer">
+        <button className="drawer-backdrop" type="button" aria-label="Close product details" onClick={() => setSelected(null)} />
+        <section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+          <button ref={detailCloseRef} className="modal-close" type="button" aria-label="Close product details" onClick={() => setSelected(null)}>×</button>
+          <div className="detail-gallery"><ProductImage product={selected} /><div className="thumbs"><ProductImage product={selected} small /><span>Details</span><span>In use</span><span>Scale</span></div></div>
+          <div className="detail-copy">
+            <p className="eyebrow"><span /> {selected.collection}</p><h2 id="detail-title">{selected.name}</h2>
+            <p className="detail-price">{selected.priceLabel ?? (selected.price === 0 ? "Custom quote" : `From ${money(selected.price)}`)}</p>
+            <p>{selected.description}</p><div className="delivery-note"><strong>Made to order</strong><span>Estimated production: {selected.productionDays} business days</span></div>
+            <fieldset><legend>Color · <b>{detailColor}</b></legend><div className="detail-swatches">{selected.colors.map((color) => <button className={detailColor === color ? "active" : ""} aria-label={`Choose ${color}`} title={color} type="button" key={color} onClick={() => setDetailColor(color)}><i className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} /></button>)}</div></fieldset>
+            {selectedSchema.length > 0 && <div className={styles.customizationGrid}>{selectedSchema.map((field) => <CustomizationControl
+              key={field.key}
+              field={field}
+              value={detailOptions[field.key] ?? ""}
+              error={detailErrors[field.key]}
+              onValue={(value) => { setDetailOptions((options) => ({ ...options, [field.key]: value })); setDetailErrors((errors) => ({ ...errors, [field.key]: "" })); }}
+              onFile={(file) => setDetailFiles((files) => { const next = { ...files }; if (file) next[field.key] = file; else delete next[field.key]; return next; })}
+            />)}</div>}
+            {selectedHasFile && <label className="rights-check"><input type="checkbox" checked={detailRights} onChange={(event) => { setDetailRights(event.target.checked); setDetailErrors((errors) => ({ ...errors, rights: "" })); }} /> I own or have permission to use every photo, drawing, logo, or design selected here.</label>}
+            {detailErrors.rights && <p className={styles.formError} role="alert">{detailErrors.rights}</p>}
+            {selectedHasFile && <p className={styles.uploadNote}>Selected files stay on this device until checkout. Checkout uploads them securely before creating the order; selecting a file here does not claim it has been uploaded.</p>}
+            <dl className="detail-facts"><div><dt>Material</dt><dd>{selected.material}</dd></div><div><dt>Included</dt><dd>Finished print + care card</dd></div><div><dt>Care</dt><dd>Cool water, hand clean only</dd></div></dl>
+            {selected.safety && <p className="safety-note">Safety: {selected.safety}</p>}
+            <button className="button button-dark detail-add" type="button" onClick={() => add(selected)}>{selected.price === 0 ? "Start custom quote" : editingLineId ? "Save cart changes" : `Add to bag · ${money(selected.price * (selected.minimum ?? 1))}`}</button>
+          </div>
+        </section>
+      </div>}
 
-      {cartOpen && <div className="drawer-layer"><button className="drawer-backdrop" type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" /><aside className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title"><div className="cart-header"><div><p>Your bag · {itemCount} items</p><h2 id="cart-title">Ready to make.</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button></div>{cart.length === 0 ? <div className="empty-cart"><h3>Your bag is still two-dimensional.</h3><p>Add a useful object and we’ll take it from there.</p><button className="button button-dark" type="button" onClick={() => setCartOpen(false)}>Explore the shop</button></div> : <><div className="cart-items">{cart.map((item,index) => <div className="cart-item" key={`${item.product.id}-${item.color}-${item.personalization}`}><ProductImage product={item.product} small /><div><p>{item.color}{item.personalization ? ` · ${item.personalization}` : ""}</p><h3>{item.product.name}</h3><div className="quantity-control"><button type="button" aria-label={`Remove one ${item.product.name}`} onClick={() => changeQuantity(index,-1)}>−</button><span>{item.quantity}</span><button type="button" aria-label={`Add one ${item.product.name}`} onClick={() => changeQuantity(index,1)}>+</button></div></div><strong>{money(item.product.price * item.quantity)}</strong></div>)}</div><div className="cart-summary"><div><span>Subtotal</span><strong>{money(subtotal)}</strong></div><p>{subtotal >= 65 ? "You unlocked free shipping." : `${money(65-subtotal)} away from free shipping.`} Tax calculated after order review.</p><button className="button button-dark" type="button" disabled>Secure checkout coming soon</button><button className="continue-shopping" type="button" onClick={() => setCartOpen(false)}>Continue shopping</button></div></>}</aside></div>}
+      {cartOpen && <div className="drawer-layer">
+        <button className="drawer-backdrop" type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" />
+        <aside className={`cart-drawer ${styles.checkoutDrawer}`} role="dialog" aria-modal="true" aria-labelledby="cart-title">
+          <div className="cart-header"><div><p>Your bag · {itemCount} items</p><h2 id="cart-title">Ready to make.</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button></div>
+          {cart.length === 0 ? <div className="empty-cart"><h3>Your bag is still two-dimensional.</h3><p>Add a useful object and we’ll take it from there.</p><button className="button button-dark" type="button" onClick={() => setCartOpen(false)}>Explore the shop</button></div> : <>
+            <div className="cart-items">{cart.map((item) => <div className={`cart-item ${styles.cartLine}`} key={item.id}>
+              <ProductImage product={item.product} small />
+              <div><p>{item.color}</p><h3>{item.product.name}</h3><ul className={styles.optionList}>{itemOptionSummary(item).map((summary) => <li key={summary}>{summary}</li>)}</ul>
+                <div className="quantity-control"><button type="button" disabled={item.quantity <= (item.product.minimum ?? 1)} aria-label={`Remove one ${item.product.name}`} onClick={() => changeQuantity(item.id,-1)}>−</button><span>{item.quantity}</span><button type="button" disabled={item.quantity >= 100} aria-label={`Add one ${item.product.name}`} onClick={() => changeQuantity(item.id,1)}>+</button></div>
+                <div className={styles.lineActions}><button type="button" onClick={() => editCartLine(item)}>Edit options</button><button type="button" onClick={() => removeCartLine(item.id)}>Remove</button></div>
+              </div><strong>{money(item.product.price * item.quantity)}</strong>
+            </div>)}</div>
+            <form className={styles.checkoutForm} onSubmit={submitCheckout}>
+              <div className={styles.totalRow}><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+              <p>{subtotal >= 65 ? "Eligible carts receive free shipping after server review." : `${money(65-subtotal)} away from the advertised free-shipping threshold.`} Final shipping and tax are returned by checkout.</p>
+              {cartHasPendingFiles && <p className={styles.uploadNote}>Product files will be uploaded securely when you continue. Keep this page open until checkout responds.</p>}
+              <h3>Customer details</h3>
+              <div className={styles.checkoutGrid}>
+                <label><span>Name *</span><input required autoComplete="name" value={checkout.name} onChange={(event) => setCheckout((value) => ({ ...value, name: event.target.value }))} /></label>
+                <label><span>Email *</span><input required type="email" autoComplete="email" value={checkout.email} onChange={(event) => setCheckout((value) => ({ ...value, email: event.target.value }))} /></label>
+                <label><span>Phone</span><input type="tel" autoComplete="tel" value={checkout.phone} onChange={(event) => setCheckout((value) => ({ ...value, phone: event.target.value }))} /></label>
+              </div>
+              <fieldset className={styles.fulfillment}><legend>Fulfillment *</legend><label><input type="radio" name="fulfillment" checked={checkout.fulfillmentMethod === "pickup"} onChange={() => setCheckout((value) => ({ ...value, fulfillmentMethod: "pickup" }))} /> Local pickup</label><label><input type="radio" name="fulfillment" checked={checkout.fulfillmentMethod === "shipping"} onChange={() => setCheckout((value) => ({ ...value, fulfillmentMethod: "shipping" }))} /> US shipping</label></fieldset>
+              {checkout.fulfillmentMethod === "shipping" && <div className={styles.addressGrid}>
+                <label className={styles.fullWidth}><span>Address *</span><input required autoComplete="shipping address-line1" value={checkout.line1} onChange={(event) => setCheckout((value) => ({ ...value, line1: event.target.value }))} /></label>
+                <label className={styles.fullWidth}><span>Apartment, suite, etc.</span><input autoComplete="shipping address-line2" value={checkout.line2} onChange={(event) => setCheckout((value) => ({ ...value, line2: event.target.value }))} /></label>
+                <label><span>City *</span><input required autoComplete="shipping address-level2" value={checkout.city} onChange={(event) => setCheckout((value) => ({ ...value, city: event.target.value }))} /></label>
+                <label><span>State *</span><input required pattern="[A-Za-z]{2}" maxLength={2} autoComplete="shipping address-level1" value={checkout.state} onChange={(event) => setCheckout((value) => ({ ...value, state: event.target.value }))} /></label>
+                <label><span>ZIP code *</span><input required pattern="[0-9]{5}(-[0-9]{4})?" autoComplete="shipping postal-code" value={checkout.postalCode} onChange={(event) => setCheckout((value) => ({ ...value, postalCode: event.target.value }))} /></label>
+              </div>}
+              {checkoutError && <p className={styles.formError} role="alert">{checkoutError}</p>}
+              {checkoutMessage && <p className={styles.formSuccess} role="status">{checkoutMessage}</p>}
+              <button className="button button-dark" disabled={checkoutPending} type="submit">{checkoutPending ? (cartHasPendingFiles ? "Uploading & preparing…" : "Preparing secure checkout…") : "Continue to secure checkout"}</button>
+              <small>We create and price the order on the server. Payment is collected only if the order API returns a hosted checkout link.</small>
+            </form>
+          </>}
+        </aside>
+      </div>}
 
       <nav className="app-tabs" aria-label="Mobile app navigation"><a href="#top"><span>⌂</span>Home</a><button type="button" onClick={() => chooseCollection("Best Sellers")}><span>▦</span>Shop</button><button type="button" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}><span>✦</span>Customize</button><a href="/company"><span>◎</span>Team</a><button type="button" onClick={() => setCartOpen(true)}><span>▱</span>Cart{itemCount > 0 && <i>{itemCount}</i>}</button></nav>
     </main>

@@ -47,7 +47,7 @@ function Personalize({ products }: { products: ReturnType<typeof useApp>['produc
         <MiniStep number="1" text="Choose a product and its color or material." />
         <MiniStep number="2" text="Enter a name, note, date, or select a file from the system picker." />
         <MiniStep number="3" text="Review the exact selections saved with your cart item." />
-        <Body muted>Selected files remain local in this preview and are not uploaded during cart building.</Body>
+        <Body muted>Selected files stay local while you build the cart, then upload securely only when you start checkout.</Body>
       </Card>
       <View style={styles.grid}>{products.map((product) => <ProductCard key={product.id} product={product} compact />)}</View>
       <Button label="Browse every personalized product" variant="secondary" onPress={() => router.push({ pathname: '/shop', params: { category: 'Gifts & Personalization' } })} />

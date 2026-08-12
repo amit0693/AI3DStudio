@@ -18,6 +18,8 @@ export default function RootLayout() {
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="product/[slug]" options={{ title: 'Product details', presentation: 'card' }} />
+        <Stack.Screen name="checkout" options={{ title: 'Checkout', presentation: 'card' }} />
+        <Stack.Screen name="checkout-return" options={{ title: 'Order status', presentation: 'card' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'card' }} />
       </Stack>
     </AppProvider>

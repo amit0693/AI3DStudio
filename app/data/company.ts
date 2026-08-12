@@ -12,7 +12,7 @@ export type WorkStatus = "complete" | "in_progress" | "queued" | "gated";
 
 export type TeamMember = {
   id: AgentId; name: string; remit: string; status: "configured" | "working";
-  execution: "on_demand";
+  execution: "on_demand"; budgetMode: "lean";
 };
 export type Initiative = {
   id: string; title: string; owner: AgentId; status: WorkStatus; progress: number;
@@ -32,31 +32,35 @@ export type Decision = {
 };
 
 export const COMPANY_PHASE = {
-  name: "Pilot launch system",
-  summary: "Storefront and mobile foundation are built; the company is narrowing to eight validated offers and a measured launch.",
+  name: "Pilot launch build",
+  summary: "Web, mobile, and server-checkout work are in progress. Launch remains gated by production payment validation, public access, and store credentials.",
   lastUpdated: "2026-08-11",
-  operatingNote: "Agents are project roles invoked for assigned work; they are not background services.",
+  operatingNote: "Agents run on demand in short, bounded assignments; they are not background services.",
+  lowTokenRules: ["One owner per task", "Read only scoped files", "Report evidence, blockers, and next action", "Stop when the acceptance gate is met"],
 } as const;
 
 export const TEAM: TeamMember[] = [
-  { id:"chief-executive", name:"Chief Executive", remit:"Priorities, capital gates, delegation, final decisions", status:"working", execution:"on_demand" },
-  { id:"technology-lead", name:"Technology Lead", remit:"Web, mobile, data, deployment and reliability", status:"working", execution:"on_demand" },
-  { id:"marketing-growth", name:"Marketing & Growth", remit:"Positioning, listings, content tests and acquisition", status:"configured", execution:"on_demand" },
-  { id:"brand-design", name:"Brand Design", remit:"Conversion UX, reusable assets and brand consistency", status:"configured", execution:"on_demand" },
-  { id:"product-research", name:"Product Research", remit:"Demand signals, offer scorecards and experiment briefs", status:"configured", execution:"on_demand" },
-  { id:"operations-supply", name:"Operations & Supply", remit:"Materials, vendors, production, packing and shipping", status:"configured", execution:"on_demand" },
-  { id:"finance-unit-economics", name:"Finance & Unit Economics", remit:"Contribution margin, pricing, cash and scale gates", status:"configured", execution:"on_demand" },
-  { id:"quality-verification", name:"Quality & Verification", remit:"Claims, checkout, product safety and release evidence", status:"working", execution:"on_demand" },
+  { id:"chief-executive", name:"Chief Executive", remit:"Priorities, capital gates, delegation, final decisions", status:"working", execution:"on_demand", budgetMode:"lean" },
+  { id:"technology-lead", name:"Technology Lead", remit:"Web, mobile, data, deployment and reliability", status:"working", execution:"on_demand", budgetMode:"lean" },
+  { id:"marketing-growth", name:"Marketing & Growth", remit:"Positioning, listings, content tests and acquisition", status:"configured", execution:"on_demand", budgetMode:"lean" },
+  { id:"brand-design", name:"Brand Design", remit:"Conversion UX, reusable assets and brand consistency", status:"configured", execution:"on_demand", budgetMode:"lean" },
+  { id:"product-research", name:"Product Research", remit:"Demand signals, offer scorecards and experiment briefs", status:"configured", execution:"on_demand", budgetMode:"lean" },
+  { id:"operations-supply", name:"Operations & Supply", remit:"Materials, vendors, production, packing and shipping", status:"configured", execution:"on_demand", budgetMode:"lean" },
+  { id:"finance-unit-economics", name:"Finance & Unit Economics", remit:"Contribution margin, pricing, cash and scale gates", status:"configured", execution:"on_demand", budgetMode:"lean" },
+  { id:"quality-verification", name:"Quality & Verification", remit:"Claims, checkout, product safety and release evidence", status:"working", execution:"on_demand", budgetMode:"lean" },
 ];
 
 export const INITIATIVES: Initiative[] = [
-  { id:"platform", title:"Commerce foundation", owner:"technology-lead", status:"complete", progress:100, outcome:"Web storefront, PWA and iOS/Android Expo apps built and validated", next:"Keep mobile aligned with validated web offers" },
+  { id:"platform", title:"Commerce foundation", owner:"technology-lead", status:"in_progress", progress:78, outcome:"Web storefront, PWA, APIs and Expo app foundations are implemented", next:"Complete production checkout and end-to-end order validation" },
   { id:"strategy", title:"Market and operating strategy", owner:"chief-executive", status:"complete", progress:100, outcome:"Eight-offer launch, supply, shipping and channel sequence approved", next:"Enforce gates before expanding the catalog" },
   { id:"agents", title:"Lean company agent team", owner:"chief-executive", status:"complete", progress:100, outcome:"Eight on-demand roles with clear decision rights", next:"Run assignments through the tracker; close with evidence" },
-  { id:"catalog", title:"Launch catalog focus", owner:"product-research", status:"in_progress", progress:85, outcome:"Primary catalog narrowed from broad research inventory", next:"Verify samples, copy, prices and production times" },
-  { id:"supply", title:"Pilot material and packaging buy", owner:"operations-supply", status:"queued", progress:20, outcome:"Lean $350–$450 pilot inventory", next:"Quote SUNLU, Elegoo and Bambu; buy only approved colors" },
-  { id:"acquisition", title:"First 50 paid orders", owner:"marketing-growth", status:"gated", progress:10, outcome:"Direct, Etsy and local proof before channel expansion", next:"Publish listings after QA and margin sign-off" },
-  { id:"verification", title:"Release and economics verification", owner:"quality-verification", status:"in_progress", progress:65, outcome:"Build, lint and app export checks passed", next:"Test scan links, personalization, packaging and checkout" },
+  { id:"catalog", title:"Eight-SKU catalog migration", owner:"product-research", status:"in_progress", progress:80, outcome:"Launch assortment and pricing are approved; web and mobile migration is underway", next:"Verify all eight SKUs, assets, copy, prices and production times across clients" },
+  { id:"payments", title:"Server checkout and payment verification", owner:"technology-lead", status:"in_progress", progress:68, outcome:"Server-created Stripe checkout, order records and webhook handling are implemented", next:"Add production Stripe secrets, register the webhook and complete a live payment-to-order test" },
+  { id:"mobile-orders", title:"Mobile checkout and order flow", owner:"technology-lead", status:"in_progress", progress:65, outcome:"Mobile cart, checkout handoff and order surfaces are being connected to server APIs", next:"Validate purchase return, order refresh and failure recovery on iOS and Android" },
+  { id:"supply", title:"Pilot material and packaging buy", owner:"operations-supply", status:"queued", progress:20, outcome:"Lean $350–$450 pilot inventory using verified value and premium baselines", next:"Confirm ELEGOO landed order, keep Bambu as premium or backup, and sample SUNLU only after a written quote" },
+  { id:"release", title:"Web and app-store release readiness", owner:"quality-verification", status:"gated", progress:35, outcome:"Release paths are defined but no public production release is approved", next:"Clear payment keys, public site access, Expo credentials, Apple signing and Google Play credentials" },
+  { id:"acquisition", title:"First 50 paid orders", owner:"marketing-growth", status:"gated", progress:5, outcome:"Direct, Etsy and local proof will precede channel expansion", next:"Publish only after payment, QA, sample and margin sign-off" },
+  { id:"verification", title:"Product and economics verification", owner:"quality-verification", status:"in_progress", progress:48, outcome:"Code checks support development readiness; product and transaction evidence remain open", next:"Test scan links, personalization, sample quality, packaging, checkout and contribution margin" },
 ];
 
 export const KPI_TARGETS: KpiTarget[] = [
@@ -66,7 +70,7 @@ export const KPI_TARGETS: KpiTarget[] = [
   { id:"failure", label:"Print failure rate", target:"<= 8% pilot, then <= 5%", owner:"quality-verification", gate:"Pause SKU and correct profile if missed" },
   { id:"returns", label:"Returns or shipping damage", target:"<= 3%", owner:"operations-supply", gate:"Repair packaging or product before scaling" },
   { id:"ontime", label:"On-time shipment", target:">= 95%", owner:"operations-supply", gate:"Reduce intake or extend lead time if missed" },
-  { id:"shipping", label:"Direct free-shipping threshold", target:"$65", owner:"finance-unit-economics", gate:"Calculated shipping below threshold" },
+  { id:"shipping", label:"Direct shipping policy", target:"$6.99 below $65 · free at $65", owner:"finance-unit-economics", gate:"Revalidate rates before release and after carrier surcharges change" },
   { id:"utilization", label:"Printer utilization scale gate", target:"> 65% for 4 weeks", owner:"chief-executive", gate:"No added printer capacity before threshold" },
 ];
 
@@ -82,7 +86,7 @@ export const LAUNCH_PRODUCTS: LaunchProduct[] = [
 ];
 
 export const CHANNEL_ROADMAP: ChannelStep[] = [
-  { order:1, channel:"Owned site", status:"in_progress", rule:"Free shipping at $65; calculated below", owner:"technology-lead" },
+  { order:1, channel:"Owned site", status:"gated", rule:"Open after live payment validation; $6.99 flat US shipping below $65 and free at $65", owner:"technology-lead" },
   { order:2, channel:"Etsy", status:"queued", rule:"List personalized and event offers first", owner:"marketing-growth" },
   { order:3, channel:"Local sales", status:"queued", rule:"Use pickup for bulky planters and B2B samples", owner:"operations-supply" },
   { order:4, channel:"eBay", status:"gated", rule:"Use for functional replacement and hobby products", owner:"marketing-growth" },
@@ -92,9 +96,11 @@ export const CHANNEL_ROADMAP: ChannelStep[] = [
 
 export const DECISIONS: Decision[] = [
   { id:"position", decision:"Sell made-to-order personalization and small-business solutions, not generic prints", owner:"chief-executive", status:"approved" },
-  { id:"inventory", decision:"Use SUNLU as primary value filament, Elegoo as backup, Bambu for premium jobs", owner:"operations-supply", status:"verify" },
-  { id:"shipping", decision:"Use Pirate Ship; default to USPS Ground under 2 lb and compare UPS for larger parcels", owner:"operations-supply", status:"verify" },
+  { id:"inventory", decision:"Use ELEGOO's verified US pricing as the value baseline and Bambu as premium or backup; treat SUNLU as quote-only until landed price and a sample pass", owner:"operations-supply", status:"verify" },
+  { id:"shipping", decision:"Phase 1 uses $6.99 flat US shipping below $65 and free shipping at $65; validate Pirate Ship USPS and UPS rates before release because temporary carrier surcharges remain active", owner:"operations-supply", status:"verify" },
   { id:"packaging", decision:"Standardize 8×6×4, 10×8×6 and 14×11×10 inch boxes", owner:"operations-supply", status:"verify" },
   { id:"imagery", decision:"Reuse approved product imagery; generate new assets only when a test requires them", owner:"brand-design", status:"approved" },
   { id:"scope", decision:"Keep non-launch catalog as research inventory, not primary navigation", owner:"product-research", status:"approved" },
+  { id:"payment-release", decision:"Do not release commerce until Stripe keys, webhook delivery and a live payment-to-order path are verified", owner:"quality-verification", status:"verify" },
+  { id:"store-release", decision:"Gate web and mobile releases on public access plus Expo, Apple and Google store credentials", owner:"technology-lead", status:"verify" },
 ];
