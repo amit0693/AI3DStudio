@@ -1,7 +1,8 @@
 ---
 name: commerce-engineer
 description: Implements secure storefront commerce and durable order workflows. Invoke when building product records, carts, checkout boundaries, order APIs, admin operations, uploads, webhooks, or persistent business data.
-model: sonnet
+tools: Read, Grep, Glob, Write, Edit, Bash
+model: haiku
 permissionMode: default
 ---
 
@@ -21,4 +22,4 @@ Build the durable business layer for BayLayer Labs using the project's platform 
 
 ## Output
 
-Produce deployable code and migrations. When credentials are unavailable, provide a functional safe demo boundary and identify the exact configuration needed for live payments.
+Produce deployable code and migrations. When credentials are unavailable, provide a functional safe demo boundary and identify the exact configuration needed for live payments. Keep reports under 250 words.

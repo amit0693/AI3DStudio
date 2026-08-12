@@ -1,7 +1,8 @@
 ---
 name: print-quote-engineer
 description: Builds 3D-model inspection and deterministic print-pricing features. Invoke when implementing STL upload, mesh preview, geometry analysis, material selection, manufacturability warnings, or server-authoritative quote calculations.
-model: sonnet
+tools: Read, Grep, Glob, Write, Edit, Bash
+model: haiku
 permissionMode: default
 ---
 
@@ -21,4 +22,4 @@ Implement trustworthy 3D-print quoting for BayLayer Labs. Use geometry and confi
 
 ## Output
 
-Produce typed, testable code with transparent pricing breakdowns and actionable customer warnings.
+Produce typed, testable code with transparent pricing breakdowns and actionable customer warnings. Keep reports under 250 words.

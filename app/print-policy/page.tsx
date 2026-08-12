@@ -10,7 +10,7 @@ export default function PrintPolicyPage() {
       <h2>Printability review</h2>
       <p>Every custom request is subject to manual review. We may recommend changes, decline a file, or require written confirmation about intended use. A browser estimate does not guarantee manufacturability.</p>
       <h2>File handling</h2>
-      <p>Files are used only to evaluate and fulfill the requested service. Preview files are marked for 30-day retention and may be deleted earlier on request.</p>
+      <p>Files are used to evaluate, proof, and fulfill the requested service. Uploads receive a 30-day expiry marker, may be retained while an order or dispute is active, and may be deleted earlier on an eligible request.</p>
     </PolicyPage>
   );
 }

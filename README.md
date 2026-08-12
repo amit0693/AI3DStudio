@@ -1,6 +1,8 @@
 # BayLayer Labs
 
-Phase 1 of a Bay Area 3D-printing business: a responsive storefront, a server-verified STL quote estimator, local-product catalog APIs, protected model uploads, order-intake foundations, and an AI camera-scan waitlist.
+Phase 1 of a Bay Area 3D-printing business: a responsive storefront, 21-product launch catalog, protected personalization/model uploads, server-authoritative orders, Stripe-hosted checkout, and an AI camera-scan waitlist.
+
+Business owners: follow the complete local web, mobile, database, payment-test, backup, and release handoff in [`docs/OWNER-LOCAL-SETUP.md`](docs/OWNER-LOCAL-SETUP.md).
 
 ## What works now
 
@@ -9,8 +11,10 @@ Phase 1 of a Bay Area 3D-printing business: a responsive storefront, a server-ve
 - Submit an email to the camera-scan waitlist with explicit marketing consent.
 - Install the responsive site as a progressive web app.
 - Use D1-backed product, order, upload, quote, and waitlist APIs.
+- Create server-repriced orders and redirect to Stripe-hosted Checkout when Stripe secrets are present.
+- Track payment/order state through an unguessable order link; only verified Stripe webhooks mark payment paid.
 
-Checkout is intentionally unavailable until Stripe credentials and business policies are configured. Custom estimates require human review before production; shipping and tax are not included in the estimate.
+Without Stripe credentials, checkout stops safely before collecting card data. Custom STL estimates require human review before production. Phase 1 US orders use $6.99 shipping below $65 and free shipping at $65; Stripe Tax calculates tax in hosted checkout.
 
 ## Local development
 
@@ -30,7 +34,7 @@ npm run lint
 npm test
 ```
 
-`npm test` performs a production build and verifies the rendered storefront and PWA assets. The D1 migration is in `drizzle/0000_slimy_frank_castle.sql`.
+`npm test` performs a production build and verifies the rendered storefront and PWA assets. Apply the ordered SQL migrations in `drizzle/` to the Sites D1 database before enabling checkout.
 
 ## Runtime bindings
 
@@ -38,6 +42,8 @@ Sites provisions the logical bindings declared in `.openai/hosting.json`:
 
 - `DB`: Cloudflare D1 catalog and order data
 - `UPLOADS`: Cloudflare R2 customer model files
+- `STRIPE_SECRET_KEY`: Stripe secret key used only by server routes
+- `STRIPE_WEBHOOK_SECRET`: signing secret for `/api/webhooks/stripe`
 
-Do not accept card data in this app. Add payments through a hosted provider checkout and verify its webhook server-side before moving an order out of `awaiting_payment`.
+Copy `.env.example` for local secret names; never commit real values. Configure the webhook for Checkout completed, async success/failure, expired, and refund events. Do not accept card data in this app and never move an order out of `awaiting_payment` based on the browser redirect alone.
 # AI3DStudio

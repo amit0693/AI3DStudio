@@ -157,6 +157,7 @@ export function publicProduct(row: ProductRow) {
       min: row.lead_time_min_days,
       max: row.lead_time_max_days,
     },
+    minimumQuantity: row.minimum_quantity,
     featured: Boolean(row.is_featured),
   };
 }
@@ -180,6 +181,7 @@ export type ProductRow = {
   attributes_json: string;
   lead_time_min_days: number;
   lead_time_max_days: number;
+  minimum_quantity: number;
   is_featured: number;
 };
 
