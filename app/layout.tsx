@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+    metadataBase: new URL("https://baylayer-labs.amitcodecraft.chatgpt.site"),
     title: {
       default: "BayLayer Labs | Ideas, made local.",
       template: "%s | BayLayer Labs",
