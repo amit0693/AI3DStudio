@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
+import { readJsonResponse } from "@/lib/http/json";
 
 type Product = {
   id: string;
@@ -224,10 +225,10 @@ export function StorefrontExperience() {
           source: "storefront",
         }),
       });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(result.error || "We could not save your email yet.");
-      }
+      await readJsonResponse<{ joined: boolean }>(
+        response,
+        "We could not save your email yet.",
+      );
       setWaitlistJoined(true);
     } catch (error) {
       setWaitlistError(

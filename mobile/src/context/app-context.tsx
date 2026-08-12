@@ -41,12 +41,18 @@ export function AppProvider({ children }: PropsWithChildren) {
         if (savedUrl) setApiBaseUrlState(savedUrl);
         if (savedCart) setCart(JSON.parse(savedCart) as CartItem[]);
       })
-      .catch(() => undefined)
+      .catch((error: unknown) => {
+        // A stored cart or API URL that cannot be read must not block startup.
+        console.warn('Stored app state could not be restored', error);
+      })
       .finally(() => setHydrated(true));
   }, []);
 
   useEffect(() => {
-    if (hydrated) AsyncStorage.setItem(CART_KEY, JSON.stringify(cart)).catch(() => undefined);
+    if (!hydrated) return;
+    AsyncStorage.setItem(CART_KEY, JSON.stringify(cart)).catch((error: unknown) => {
+      console.warn('The cart could not be saved for the next launch', error);
+    });
   }, [cart, hydrated]);
 
   const refreshCatalog = useCallback(async () => {

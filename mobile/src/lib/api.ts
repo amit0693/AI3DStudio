@@ -9,9 +9,26 @@ export function normalizeBaseUrl(value: string) {
 }
 
 async function readResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`);
-  return payload;
+  const text = await response.text();
+  let payload: unknown = null;
+  if (text.trim()) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(`The server sent an unreadable response (${response.status}).`);
+    }
+  }
+
+  const reported =
+    payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? (payload as { error?: unknown }).error
+      : undefined;
+  const message = typeof reported === 'string' ? reported : null;
+
+  if (!response.ok) throw new Error(message || `Request failed (${response.status}).`);
+  if (message) throw new Error(message);
+  if (payload === null) throw new Error(`The server sent an empty response (${response.status}).`);
+  return payload as T;
 }
 
 export async function fetchProducts(apiBaseUrl: string, signal?: AbortSignal): Promise<Product[]> {

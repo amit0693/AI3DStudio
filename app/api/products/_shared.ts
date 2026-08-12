@@ -1,4 +1,9 @@
+import { StorageBindingError } from "@/db";
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const STORAGE_UNAVAILABLE_MESSAGE =
+  "Commerce storage is not ready yet. Apply the bundled D1 migration and verify the Sites storage bindings.";
 
 export class ApiError extends Error {
   constructor(
@@ -21,22 +26,16 @@ export function json(data: unknown, status = 200, headers?: HeadersInit) {
 
 export function handleApiError(error: unknown) {
   if (error instanceof ApiError) {
+    if (error.status >= 500) {
+      console.error("Commerce API error", error);
+    }
     return json({ error: error.message }, error.status);
   }
 
-  const message = error instanceof Error ? error.message : "Unknown error";
-  if (
-    message.includes("binding `DB`") ||
-    message.includes("binding `UPLOADS`") ||
-    message.includes("no such table")
-  ) {
-    return json(
-      {
-        error:
-          "Commerce storage is not ready yet. Apply the bundled D1 migration and verify the Sites storage bindings.",
-      },
-      503,
-    );
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof StorageBindingError || message.includes("no such table")) {
+    console.error("Commerce storage is unavailable", error);
+    return json({ error: STORAGE_UNAVAILABLE_MESSAGE }, 503);
   }
 
   console.error("Commerce API error", error);
@@ -122,7 +121,8 @@ export function parseJsonColumn<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
   try {
     return JSON.parse(value) as T;
-  } catch {
+  } catch (error) {
+    console.error("Stored JSON column could not be parsed", error);
     return fallback;
   }
 }
