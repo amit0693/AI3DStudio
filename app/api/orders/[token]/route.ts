@@ -1,10 +1,17 @@
 import { getD1 } from "@/db";
 import {
   ApiError,
+  enforceRateLimit,
   handleApiError,
   json,
   parseJsonColumn,
 } from "../../products/_shared";
+
+const LOOKUP_RATE_LIMIT = {
+  bucket: "order-lookup",
+  limit: 60,
+  windowSeconds: 600,
+};
 
 type OrderRow = {
   id: string;
@@ -39,10 +46,12 @@ type HistoryRow = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
+    await enforceRateLimit(request, LOOKUP_RATE_LIMIT);
+
     const { token: rawToken } = await params;
     const token = decodeURIComponent(rawToken);
     if (!/^[a-f0-9]{64}$/.test(token)) {
