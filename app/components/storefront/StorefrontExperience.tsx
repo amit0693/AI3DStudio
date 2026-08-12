@@ -2,6 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
+import { errorMessage } from "@/lib/errors";
+import { formatCurrency } from "@/lib/format/money";
+import { postJson } from "@/lib/http/json-request";
 
 type Product = {
   id: string;
@@ -77,11 +80,7 @@ const products: Product[] = [
 const categories = ["All", ...Array.from(new Set(products.map((product) => product.category)))];
 
 function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(value);
+  return formatCurrency(value, { minimumFractionDigits: 0 });
 }
 
 function ProductArt({ product }: { product: Product }) {
@@ -214,25 +213,19 @@ export function StorefrontExperience() {
     setWaitlistError("");
 
     try {
-      const response = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await postJson(
+        "/api/waitlist",
+        {
           email: waitlistEmail,
           feature: "ai-scan",
           marketingConsent: waitlistConsent,
           source: "storefront",
-        }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(result.error || "We could not save your email yet.");
-      }
+        },
+        "We could not save your email yet.",
+      );
       setWaitlistJoined(true);
     } catch (error) {
-      setWaitlistError(
-        error instanceof Error ? error.message : "We could not save your email yet.",
-      );
+      setWaitlistError(errorMessage(error, "We could not save your email yet."));
     } finally {
       setWaitlistPending(false);
     }

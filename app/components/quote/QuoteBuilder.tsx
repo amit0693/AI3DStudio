@@ -1,6 +1,9 @@
 "use client";
 
 import { useId, useState, type ChangeEvent, type FormEvent } from "react";
+import { errorMessage } from "@/lib/errors";
+import { formatBytes, formatCents } from "@/lib/format/money";
+import { postFormData } from "@/lib/http/json-request";
 import {
   MATERIAL_OPTIONS,
   QUALITY_OPTIONS,
@@ -10,7 +13,6 @@ import type {
   GeometryReport,
   MaterialKey,
   QualityKey,
-  QuoteErrorResponse,
   QuoteEstimate,
 } from "@/lib/quote/types";
 import styles from "./QuoteBuilder.module.css";
@@ -18,20 +20,6 @@ import styles from "./QuoteBuilder.module.css";
 export interface QuoteBuilderProps {
   className?: string;
   heading?: string;
-}
-
-const usd = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
-function formatCents(value: number): string {
-  return usd.format(value / 100);
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function QuoteBuilder({
@@ -61,11 +49,7 @@ export function QuoteBuilder({
     try {
       setGeometry(inspectStl(await nextFile.arrayBuffer(), nextFile.name));
     } catch (inspectionError) {
-      setError(
-        inspectionError instanceof Error
-          ? inspectionError.message
-          : "This STL could not be inspected.",
-      );
+      setError(errorMessage(inspectionError, "This STL could not be inspected."));
     } finally {
       setIsInspecting(false);
     }
@@ -88,21 +72,16 @@ export function QuoteBuilder({
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/quotes", {
-        method: "POST",
-        body: form,
-      });
-      const body = (await response.json()) as QuoteEstimate | QuoteErrorResponse;
-      if (!response.ok || "error" in body) {
-        throw new Error("error" in body ? body.error : "Quote request failed.");
-      }
+      const body = await postFormData<QuoteEstimate>(
+        "/api/quotes",
+        form,
+        "Quote request failed.",
+      );
       setEstimate(body);
       setGeometry(body.geometry);
     } catch (requestError) {
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not calculate this estimate.",
+        errorMessage(requestError, "We could not calculate this estimate."),
       );
     } finally {
       setIsSubmitting(false);

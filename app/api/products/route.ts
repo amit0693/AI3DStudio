@@ -1,19 +1,13 @@
 import { getD1 } from "@/db";
 import {
   ApiError,
+  CACHEABLE_HEADERS,
   handleApiError,
   json,
+  PRODUCT_COLUMNS,
   ProductRow,
   publicProduct,
-} from "./_shared";
-
-const PRODUCT_SELECT = `
-  SELECT id, slug, sku, name, short_description, description, category,
-         product_type, base_price_cents, compare_at_price_cents, currency,
-         material, image_url, gallery_json, personalization_schema_json,
-         attributes_json, lead_time_min_days, lead_time_max_days, is_featured
-  FROM products
-`;
+} from "@/lib/api";
 
 export async function GET(request: Request) {
   try {
@@ -44,7 +38,9 @@ export async function GET(request: Request) {
     values.push(requestedLimit);
 
     const statement = getD1().prepare(
-      `${PRODUCT_SELECT} WHERE ${conditions.join(" AND ")}
+      `SELECT ${PRODUCT_COLUMNS}
+       FROM products
+       WHERE ${conditions.join(" AND ")}
        ORDER BY is_featured DESC, sort_order ASC, name ASC LIMIT ?`,
     );
     const result = await statement.bind(...values).all<ProductRow>();
@@ -52,7 +48,7 @@ export async function GET(request: Request) {
     return json(
       { products: result.results.map(publicProduct) },
       200,
-      { "Cache-Control": "public, max-age=60, s-maxage=300" },
+      CACHEABLE_HEADERS,
     );
   } catch (error) {
     return handleApiError(error);

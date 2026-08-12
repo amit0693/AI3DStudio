@@ -5,10 +5,14 @@ import {
   cleanText,
   handleApiError,
   integerInRange,
+  isPlainObject,
   json,
+  orderAmounts,
+  type OrderAmountColumns,
+  prefixedId,
   readJsonObject,
   randomToken,
-} from "../products/_shared";
+} from "@/lib/api";
 
 type CatalogRow = {
   id: string;
@@ -18,19 +22,13 @@ type CatalogRow = {
   currency: string;
 };
 
-type ExistingOrderRow = {
+type ExistingOrderRow = OrderAmountColumns & {
   id: string;
   order_number: string;
   public_token: string;
   customer_email: string;
   status: string;
   payment_status: string;
-  currency: string;
-  subtotal_cents: number;
-  shipping_cents: number;
-  tax_cents: number;
-  discount_cents: number;
-  total_cents: number;
   created_at: string;
 };
 
@@ -45,7 +43,7 @@ const FLAT_SHIPPING_CENTS = 699;
 
 function cleanPersonalization(value: unknown) {
   if (value == null) return {};
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isPlainObject(value)) {
     throw new ApiError(400, "personalization must be an object.");
   }
   const entries = Object.entries(value);
@@ -80,27 +78,27 @@ function cleanItems(value: unknown): RequestedItem[] {
     throw new ApiError(400, `items must contain 1 to ${MAX_ORDER_ITEMS} products.`);
   }
   return value.map((item, index) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
+    if (!isPlainObject(item)) {
       throw new ApiError(400, `items[${index}] must be an object.`);
     }
-    const record = item as Record<string, unknown>;
-    const productId = cleanText(record.productId, `items[${index}].productId`, 80, true)!;
+    const productId = cleanText(item.productId, `items[${index}].productId`, 80, true)!;
     if (!/^[a-zA-Z0-9_-]+$/.test(productId)) {
       throw new ApiError(400, `items[${index}].productId is invalid.`);
     }
     return {
       productId,
-      quantity: integerInRange(record.quantity, `items[${index}].quantity`, 1, 25, 1),
-      personalization: cleanPersonalization(record.personalization),
+      quantity: integerInRange(item.quantity, `items[${index}].quantity`, 1, 25, 1),
+      personalization: cleanPersonalization(item.personalization),
     };
   });
 }
 
 function cleanShippingAddress(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  if (!isPlainObject(value)) {
     throw new ApiError(400, "shippingAddress is required for shipping orders.");
   }
-  const address = value as Record<string, unknown>;
+  const address = value;
+
   const country = cleanText(address.country, "shippingAddress.country", 2, true)!.toUpperCase();
   if (country !== "US") {
     throw new ApiError(400, "Phase 1 shipping is available only within the United States.");
@@ -130,14 +128,7 @@ function orderResponse(row: ExistingOrderRow) {
     trackingToken: row.public_token,
     status: row.status,
     paymentStatus: row.payment_status,
-    amounts: {
-      subtotalCents: row.subtotal_cents,
-      shippingCents: row.shipping_cents,
-      taxCents: row.tax_cents,
-      discountCents: row.discount_cents,
-      totalCents: row.total_cents,
-      currency: row.currency,
-    },
+    amounts: orderAmounts(row),
     createdAt: row.created_at,
   };
 }
@@ -220,7 +211,7 @@ export async function POST(request: Request) {
     const discountCents = 0;
     const totalCents = subtotalCents + shippingCents + taxCents - discountCents;
 
-    const orderId = `ord_${crypto.randomUUID()}`;
+    const orderId = prefixedId("ord");
     const trackingToken = randomToken();
     const orderNumber = `BL-${new Date().getUTCFullYear()}-${crypto.randomUUID()
       .replaceAll("-", "")
@@ -266,7 +257,7 @@ export async function POST(request: Request) {
              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
-            `item_${crypto.randomUUID()}`,
+            prefixedId("item"),
             orderId,
             item.product.id,
             item.product.sku,
@@ -284,7 +275,7 @@ export async function POST(request: Request) {
           `INSERT INTO order_status_history (id, order_id, status, note, actor)
            VALUES (?, ?, 'awaiting_payment', 'Order created from storefront.', 'customer')`,
         )
-        .bind(`osh_${crypto.randomUUID()}`, orderId),
+        .bind(prefixedId("osh"), orderId),
     );
     await db.batch(statements);
 

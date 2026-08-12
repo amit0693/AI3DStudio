@@ -3,21 +3,18 @@ import {
   ApiError,
   handleApiError,
   json,
+  orderAmounts,
+  type OrderAmountColumns,
   parseJsonColumn,
-} from "../../products/_shared";
+  readPathParam,
+} from "@/lib/api";
 
-type OrderRow = {
+type OrderRow = OrderAmountColumns & {
   id: string;
   order_number: string;
   status: string;
   payment_status: string;
   fulfillment_method: string;
-  currency: string;
-  subtotal_cents: number;
-  shipping_cents: number;
-  tax_cents: number;
-  discount_cents: number;
-  total_cents: number;
   created_at: string;
   updated_at: string;
 };
@@ -43,11 +40,11 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
-    const { token: rawToken } = await params;
-    const token = decodeURIComponent(rawToken);
-    if (!/^[a-f0-9]{64}$/.test(token)) {
-      throw new ApiError(404, "Order not found.");
-    }
+    const token = await readPathParam(params, "token", {
+      pattern: /^[a-f0-9]{64}$/,
+      message: "Order not found.",
+      status: 404,
+    });
 
     const db = getD1();
     const order = await db
@@ -86,14 +83,7 @@ export async function GET(
         status: order.status,
         paymentStatus: order.payment_status,
         fulfillmentMethod: order.fulfillment_method,
-        amounts: {
-          subtotalCents: order.subtotal_cents,
-          shippingCents: order.shipping_cents,
-          taxCents: order.tax_cents,
-          discountCents: order.discount_cents,
-          totalCents: order.total_cents,
-          currency: order.currency,
-        },
+        amounts: orderAmounts(order),
         items: itemsResult.results.map((item) => ({
           id: item.id,
           sku: item.sku_snapshot,

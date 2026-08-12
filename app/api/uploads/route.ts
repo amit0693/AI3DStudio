@@ -1,14 +1,20 @@
 import { getD1, getUploadsBucket } from "@/db";
 import {
   ApiError,
+  assertContentLengthWithin,
   cleanEmail,
   cleanText,
   handleApiError,
   integerInRange,
+  isMultipartFormData,
   json,
+  oneOf,
+  prefixedId,
   randomToken,
+  readFormFile,
+  readFormText,
   sha256Hex,
-} from "../products/_shared";
+} from "@/lib/api";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_FILE_BYTES + 256 * 1024;
@@ -30,11 +36,6 @@ const MIME_TYPES: Record<string, Set<string>> = {
     "model/3mf",
   ]),
 };
-
-function formText(form: FormData, name: string) {
-  const value = form.get(name);
-  return typeof value === "string" ? value : null;
-}
 
 function safeFilename(value: string) {
   const leaf = value.split(/[\\/]/).pop() ?? "model";
@@ -70,7 +71,7 @@ function optionalClientEstimates(form: FormData) {
     ["depthMm", "depthMm"],
     ["volumeMm3", "volumeMm3"],
   ] as const) {
-    const raw = formText(form, formKey);
+    const raw = readFormText(form, formKey);
     if (raw == null || raw === "") continue;
     const value = Number(raw);
     if (!Number.isFinite(value) || value <= 0 || value > 10_000_000_000) {
@@ -84,18 +85,18 @@ function optionalClientEstimates(form: FormData) {
 export async function POST(request: Request) {
   let uploadedObjectKey: string | null = null;
   try {
-    const contentType = request.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+    if (!isMultipartFormData(request)) {
       throw new ApiError(415, "Use multipart/form-data with a file field.");
     }
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) {
-      throw new ApiError(413, "The upload exceeds the 25 MB limit.");
-    }
+    assertContentLengthWithin(
+      request,
+      MAX_MULTIPART_BYTES,
+      "The upload exceeds the 25 MB limit.",
+    );
 
     const form = await request.formData();
-    const candidate = form.get("file");
-    if (!(candidate instanceof File)) {
+    const candidate = readFormFile(form, "file");
+    if (!candidate) {
       throw new ApiError(400, "A model file is required in the file field.");
     }
     if (candidate.size < 1 || candidate.size > MAX_FILE_BYTES) {
@@ -112,25 +113,21 @@ export async function POST(request: Request) {
       throw new ApiError(415, `The file type does not match a ${format.toUpperCase()} model.`);
     }
 
-    const email = cleanEmail(formText(form, "email"), false);
-    const material = (cleanText(formText(form, "material"), "material", 12) ?? "PLA").toUpperCase();
-    const color = cleanText(formText(form, "color"), "color", 40);
-    const quality = (cleanText(formText(form, "quality"), "quality", 16) ?? "standard").toLowerCase();
-    if (!ALLOWED_MATERIAL.has(material)) {
-      throw new ApiError(400, "material must be PLA, PETG, or TPU.");
-    }
-    if (!ALLOWED_QUALITY.has(quality)) {
-      throw new ApiError(400, "quality must be draft, standard, or fine.");
-    }
+    const email = cleanEmail(readFormText(form, "email"), false);
+    const material = (cleanText(readFormText(form, "material"), "material", 12) ?? "PLA").toUpperCase();
+    const color = cleanText(readFormText(form, "color"), "color", 40);
+    const quality = (cleanText(readFormText(form, "quality"), "quality", 16) ?? "standard").toLowerCase();
+    oneOf(material, ALLOWED_MATERIAL, "material must be PLA, PETG, or TPU.");
+    oneOf(quality, ALLOWED_QUALITY, "quality must be draft, standard, or fine.");
     const infillPercent = integerInRange(
-      Number(formText(form, "infillPercent") ?? "20"),
+      Number(readFormText(form, "infillPercent") ?? "20"),
       "infillPercent",
       0,
       100,
       20,
     );
     const quantity = integerInRange(
-      Number(formText(form, "quantity") ?? "1"),
+      Number(readFormText(form, "quantity") ?? "1"),
       "quantity",
       1,
       100,
@@ -140,8 +137,8 @@ export async function POST(request: Request) {
 
     const bytes = await candidate.arrayBuffer();
     inspectFile(bytes, format);
-    const uploadId = `upl_${crypto.randomUUID()}`;
-    const quoteId = `qte_${crypto.randomUUID()}`;
+    const uploadId = prefixedId("upl");
+    const quoteId = prefixedId("qte");
     const accessToken = randomToken();
     const accessTokenHash = await sha256Hex(accessToken);
     const checksum = await sha256Hex(bytes);
