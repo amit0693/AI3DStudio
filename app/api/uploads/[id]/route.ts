@@ -4,8 +4,9 @@ import {
   handleApiError,
   json,
   parseJsonColumn,
+  readPathParam,
   sha256Hex,
-} from "../../products/_shared";
+} from "@/lib/api";
 
 type UploadStatusRow = {
   id: string;
@@ -35,11 +36,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id: rawId } = await params;
-    const id = decodeURIComponent(rawId);
-    if (!/^upl_[a-f0-9-]{36}$/.test(id)) {
-      throw new ApiError(404, "Upload not found.");
-    }
+    const id = await readPathParam(params, "id", {
+      pattern: /^upl_[a-f0-9-]{36}$/,
+      message: "Upload not found.",
+      status: 404,
+    });
     const accessToken = request.headers.get("x-upload-token")?.trim() ?? "";
     if (!/^[a-f0-9]{64}$/.test(accessToken)) {
       throw new ApiError(404, "Upload not found.");

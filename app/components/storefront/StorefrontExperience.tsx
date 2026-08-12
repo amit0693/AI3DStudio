@@ -3,6 +3,9 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
 import { LAUNCH_COLLECTIONS, type Collection, type Product, LAUNCH_PRODUCTS } from "@/app/data/catalog";
+import { errorMessage } from "@/lib/errors";
+import { formatCurrency } from "@/lib/format/money";
+import { postFormData, postJson, requestJson } from "@/lib/http/json-request";
 import styles from "./StorefrontExperience.module.css";
 
 type CustomizationField = {
@@ -127,7 +130,7 @@ const RECIPIENTS: Array<[string, Collection]> = [
 
 function money(value: number) {
   if (value === 0) return "Custom quote";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+  return formatCurrency(value);
 }
 
 const SWATCH_HEX: Record<string, string> = {
@@ -464,13 +467,11 @@ export function StorefrontExperience() {
         for (const [fieldKey, file] of Object.entries(item.files)) {
           const uploadForm = new FormData();
           uploadForm.append("file", file);
-          const uploadResponse = await fetch("/api/personalization-uploads", { method: "POST", body: uploadForm });
-          const uploadResult = await uploadResponse.json() as {
-            error?: string;
+          const uploadResult = await postFormData<{
             upload?: { id: string; accessToken: string; filename: string };
-          };
-          if (!uploadResponse.ok || !uploadResult.upload) {
-            throw new Error(uploadResult.error || `We could not securely upload ${file.name}.`);
+          }>("/api/personalization-uploads", uploadForm, `We could not securely upload ${file.name}.`);
+          if (!uploadResult.upload) {
+            throw new Error(`We could not securely upload ${file.name}.`);
           }
           personalization[fieldKey] = uploadResult.upload.id;
           personalization[`${fieldKey}Token`] = uploadResult.upload.accessToken;
@@ -502,20 +503,21 @@ export function StorefrontExperience() {
       if (checkoutAttemptRef.current.signature !== signature) {
         checkoutAttemptRef.current = { signature, key: crypto.randomUUID() };
       }
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": checkoutAttemptRef.current.key,
-        },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json() as {
-        error?: string;
+      const result = await requestJson<{
         order?: { orderNumber?: string; trackingToken?: string };
         checkout?: { available?: boolean; url?: string; message?: string };
-      };
-      if (!response.ok) throw new Error(result.error || "We could not prepare this order.");
+      }>(
+        "/api/orders",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": checkoutAttemptRef.current.key,
+          },
+          body: JSON.stringify(body),
+        },
+        "We could not prepare this order.",
+      );
       if (result.checkout?.url) {
         window.location.assign(result.checkout.url);
         return;
@@ -523,7 +525,7 @@ export function StorefrontExperience() {
       const orderLabel = result.order?.orderNumber ? `Order request ${result.order.orderNumber} was saved. ` : "Your order request was saved. ";
       setCheckoutMessage(`${orderLabel}${result.checkout?.message || "Payment is not configured, so no payment details were collected."}`);
     } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : "We could not prepare this order.");
+      setCheckoutError(errorMessage(error, "We could not prepare this order."));
     } finally {
       setCheckoutPending(false);
     }
@@ -532,11 +534,13 @@ export function StorefrontExperience() {
   async function joinWaitlist(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setPending(true); setWaitlistError("");
     try {
-      const response = await fetch("/api/waitlist", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ email, feature:"product-drops", marketingConsent:consent, source:"storefront" }) });
-      const body = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(body.error || "We couldn’t save that email yet.");
+      await postJson(
+        "/api/waitlist",
+        { email, feature: "product-drops", marketingConsent: consent, source: "storefront" },
+        "We couldn’t save that email yet.",
+      );
       setJoined(true);
-    } catch (error) { setWaitlistError(error instanceof Error ? error.message : "Please try again."); }
+    } catch (error) { setWaitlistError(errorMessage(error, "Please try again.")); }
     finally { setPending(false); }
   }
 

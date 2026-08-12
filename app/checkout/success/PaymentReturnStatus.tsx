@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { requestJson } from "@/lib/http/json-request";
 
 export function PaymentReturnStatus({ token }: { token: string }) {
   const [message, setMessage] = useState("Checking verified payment status…");
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/orders/${encodeURIComponent(token)}`)
-      .then(async (response) => {
-        const payload = await response.json() as { error?: string; order?: { paymentStatus?: string } };
-        if (!response.ok || !payload.order) throw new Error(payload.error || "Order status is unavailable.");
+    requestJson<{ order?: { paymentStatus?: string } }>(
+      `/api/orders/${encodeURIComponent(token)}`,
+      {},
+      "Order status is unavailable.",
+    )
+      .then((payload) => {
+        if (!payload.order) throw new Error("Order status is unavailable.");
         if (!active) return;
         if (payload.order.paymentStatus === "paid") {
           window.localStorage.removeItem("baylayer-cart-v2");

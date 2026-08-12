@@ -1,3 +1,4 @@
+import { isMultipartFormData, json, readFormFile } from "@/lib/api";
 import { calculateQuote } from "@/lib/quote/calculator";
 import { inspectStl } from "@/lib/quote/stl";
 import {
@@ -8,27 +9,9 @@ import type { QuoteErrorResponse } from "@/lib/quote/types";
 
 export const runtime = "nodejs";
 
-function json(body: unknown, status = 200): Response {
-  return Response.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
-}
-
-function isUploadedFile(value: FormDataEntryValue | null): value is File {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "arrayBuffer" in value &&
-    "name" in value &&
-    typeof value.name === "string"
-  );
-}
-
 export async function POST(request: Request): Promise<Response> {
   try {
-    const contentType = request.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    if (!isMultipartFormData(request)) {
       return json(
         { error: "Send the STL and quote options as multipart form data." },
         415,
@@ -36,8 +19,8 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const form = await request.formData();
-    const uploadedFile = form.get("file");
-    if (!isUploadedFile(uploadedFile)) {
+    const uploadedFile = readFormFile(form, "file");
+    if (!uploadedFile) {
       throw new QuoteValidationError("An STL file is required.", {
         file: "Choose an STL file to quote.",
       });
@@ -73,4 +56,3 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 }
-

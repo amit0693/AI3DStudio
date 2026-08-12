@@ -1,5 +1,5 @@
 import { getD1, getStripeConfig } from "@/db";
-import { json } from "../../products/_shared";
+import { json, prefixedId } from "@/lib/api";
 import { verifyStripeSignature } from "../../stripe/_shared";
 
 type StripeEvent = {
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
           `INSERT INTO order_status_history (id, order_id, status, note, actor)
            VALUES (?, ?, 'confirmed', ?, 'stripe')`,
         )
-        .bind(`osh_${crypto.randomUUID()}`, orderId, `Payment verified by Stripe event ${event.id}.`),
+        .bind(prefixedId("osh"), orderId, `Payment verified by Stripe event ${event.id}.`),
     ]);
   }
 
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
           `INSERT INTO order_status_history (id, order_id, status, note, actor)
            VALUES (?, ?, 'refunded', ?, 'stripe')`,
         )
-        .bind(`osh_${crypto.randomUUID()}`, orderId, `Refund confirmed by Stripe event ${event.id}.`),
+        .bind(prefixedId("osh"), orderId, `Refund confirmed by Stripe event ${event.id}.`),
     ]);
   }
 

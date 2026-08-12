@@ -1,11 +1,15 @@
 import { getD1, getUploadsBucket } from "@/db";
 import {
   ApiError,
+  assertContentLengthWithin,
   handleApiError,
+  isMultipartFormData,
   json,
+  prefixedId,
   randomToken,
+  readFormFile,
   sha256Hex,
-} from "../products/_shared";
+} from "@/lib/api";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
@@ -38,16 +42,17 @@ function inspectBytes(bytes: ArrayBuffer, contentType: string) {
 export async function POST(request: Request) {
   let objectKey: string | null = null;
   try {
-    if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("multipart/form-data")) {
+    if (!isMultipartFormData(request)) {
       throw new ApiError(415, "Use multipart/form-data with a file field.");
     }
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (Number.isFinite(contentLength) && contentLength > MAX_FILE_BYTES + 256 * 1024) {
-      throw new ApiError(413, "The upload exceeds the 10 MB limit.");
-    }
+    assertContentLengthWithin(
+      request,
+      MAX_FILE_BYTES + 256 * 1024,
+      "The upload exceeds the 10 MB limit.",
+    );
     const form = await request.formData();
-    const file = form.get("file");
-    if (!(file instanceof File) || file.size < 1 || file.size > MAX_FILE_BYTES) {
+    const file = readFormFile(form, "file");
+    if (!file || file.size < 1 || file.size > MAX_FILE_BYTES) {
       throw new ApiError(400, "Choose a JPG, PNG, WebP, or PDF file up to 10 MB.");
     }
     const contentType = file.type.toLowerCase();
@@ -56,7 +61,7 @@ export async function POST(request: Request) {
     }
     const bytes = await file.arrayBuffer();
     inspectBytes(bytes, contentType);
-    const id = `asset_${crypto.randomUUID()}`;
+    const id = prefixedId("asset");
     const accessToken = randomToken();
     const accessTokenHash = await sha256Hex(accessToken);
     const checksum = await sha256Hex(bytes);
