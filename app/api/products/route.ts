@@ -11,7 +11,8 @@ const PRODUCT_SELECT = `
   SELECT id, slug, sku, name, short_description, description, category,
          product_type, base_price_cents, compare_at_price_cents, currency,
          material, image_url, gallery_json, personalization_schema_json,
-         attributes_json, lead_time_min_days, lead_time_max_days, is_featured
+         attributes_json, lead_time_min_days, lead_time_max_days, minimum_quantity,
+         is_featured
   FROM products
 `;
 

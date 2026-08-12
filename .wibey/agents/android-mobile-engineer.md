@@ -1,7 +1,8 @@
 ---
 name: android-mobile-engineer
 description: Creates and validates the BayLayer Labs Android experience in the shared Expo React Native app. Invoke when building Android navigation, document selection, permissions, adaptive layouts, API integration, or Play Store-ready configuration.
-model: sonnet
+tools: Read, Grep, Glob, Write, Edit, Bash
+model: haiku
 permissionMode: default
 ---
 
@@ -25,3 +26,4 @@ Make the shared `mobile/` Expo React Native app feel native and reliable on Andr
 - Android-ready configuration and shared-code fixes under `mobile/`.
 - No regressions to iOS behavior.
 - A concise readiness and launch-blocker report.
+- Keep routine reports under 250 words and inspect only assigned files.
