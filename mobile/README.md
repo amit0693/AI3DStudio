@@ -1,13 +1,23 @@
 # BayLayer Labs mobile
 
-Phase 1 Expo/React Native customer app for iOS and Android. The app browses the BayLayer catalog, keeps a cart on-device, submits STL files for server-side estimates, and collects explicit-consent AI Scan early-access registrations.
+Shared Expo/React Native storefront for iOS and Android. The app includes a complete 3D-print catalog, personalization options, an on-device cart, order-status boundaries, and server-verified STL estimates.
 
-Payments, production ordering, and camera scanning are intentionally disabled in this preview.
+## Customer navigation
+
+The five bottom tabs are:
+
+1. **Home** — flagship product, benefits, best sellers, categories, and customization overview.
+2. **Shop** — search, category chips, personalization/material/price filters, sorting, and product cards.
+3. **Customize** — personalized-product discovery and the STL quote uploader.
+4. **Orders** — honest empty state and an explanation of the future production timeline.
+5. **Cart** — persisted product options, quantities, subtotal, and checkout boundaries.
+
+Settings is intentionally outside the five tabs. Open it from the account icon in any tab header. The search icon opens Shop.
 
 ## Requirements
 
 - Node.js 22.13 or newer
-- Xcode 26.4 or newer for SDK 57 iOS native builds
+- Xcode 26.4 or newer for Expo SDK 57 iOS native builds
 - Android Studio with an SDK 57-compatible Android SDK/JDK for native Android builds
 - Expo SDK 57 / React Native 0.86
 
@@ -30,14 +40,22 @@ npx expo export --platform ios --output-dir dist-ios
 npx expo export --platform android --output-dir dist-android
 ```
 
+## Catalog and product imagery
+
+- `src/lib/catalog.ts` contains the complete bundled catalog and is available offline.
+- A successful live API response is merged with the bundled catalog so live products and pricing can coexist with the complete launch range.
+- Eight flagship products use local imagery in `assets/products/`.
+- Every other product has an accessible category-specific visual fallback; the app does not depend on remote images.
+
 ## Privacy and security boundaries
 
 - API configuration is stored locally with AsyncStorage; never enter a secret or access token.
-- The app does not request camera access in Phase 1.
-- The STL is copied into the app cache by the system document picker, then sent only when the customer asks for an estimate.
-- Cart contents are stored on the device. No payment details are collected.
-- Waitlist submission requires an explicit marketing-consent toggle.
+- The app does not request camera or broad photo-library access.
+- Personalization images are selected through the system document picker and remain local while building the cart.
+- An STL is copied into the app cache by the system document picker, then sent only when the customer taps **Calculate estimate**.
+- Cart contents and customization filenames are stored on the device. Image bytes and payment details are not stored in the cart.
+- Checkout, production ordering, and order history are intentionally disabled until verified backend flows exist.
 
 ## Publication
 
-No App Store or Play Store release has been created. Before store submission, configure the team's Expo/EAS project, signing credentials, privacy declarations, screenshots, support URL, and production API access. Live checkout also requires a verified payment flow and backend webhook handling.
+No App Store or Play Store release has been created. Before store submission, configure the team's Expo/EAS project, signing credentials, privacy declarations, screenshots, support URL, production API access, verified checkout, and backend fulfillment/webhook handling.

@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       title: "BayLayer Labs | Ideas, made local.",
       description:
         "Useful, personalized 3D prints and custom prototypes made in the Bay Area.",
-      images: [{ url: "/og.png", width: 1731, height: 909 }],
+      images: [{ url: "/og.png", width: 1720, height: 914 }],
     },
     twitter: {
       card: "summary_large_image",

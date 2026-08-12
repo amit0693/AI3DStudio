@@ -2,98 +2,35 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
+import { COLLECTIONS, type Collection, type Product, PRODUCTS } from "@/app/data/catalog";
 
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: number;
-  badge?: string;
-  color: string;
-  art: string;
-  searchTerms: string[];
-};
+type CartItem = { product: Product; quantity: number; color: string; personalization?: string };
+type SortKey = "featured" | "best" | "new" | "low" | "high" | "fast";
 
-type CartItem = Product & { quantity: number };
-
-const products: Product[] = [
-  {
-    id: "desk-sign",
-    name: "Contour Name Sign",
-    category: "Personalized",
-    description: "A layered desk sign, sized and colored for your space.",
-    price: 24,
-    badge: "Launch collection",
-    color: "mint",
-    art: "name-sign",
-    searchTerms: ["name", "sign", "personalized", "desk", "gift", "custom"],
-  },
-  {
-    id: "qr-stand",
-    name: "Counter QR Stand",
-    category: "For business",
-    description: "A sturdy, custom-color stand for menus, reviews, or Wi-Fi.",
-    price: 34,
-    badge: "For local business",
-    color: "orange",
-    art: "qr-stand",
-    searchTerms: ["qr", "wifi", "menu", "reviews", "counter", "business"],
-  },
-  {
-    id: "cable-kit",
-    name: "Cable Tidy Kit",
-    category: "Desk & home",
-    description: "Six low-profile clips that keep a busy desk under control.",
-    price: 18,
-    color: "blue",
-    art: "cable-kit",
-    searchTerms: ["cable", "clips", "organizer", "desk", "home", "tidy"],
-  },
-  {
-    id: "lithophane",
-    name: "Memory Light Panel",
-    category: "Gifts",
-    description: "Turn a favorite photo into a softly glowing keepsake panel.",
-    price: 39,
-    badge: "Gift-ready",
-    color: "yellow",
-    art: "light-panel",
-    searchTerms: ["photo", "memory", "light", "lithophane", "gift", "keepsake"],
-  },
-  {
-    id: "prototype",
-    name: "Prototype Starter",
-    category: "Custom",
-    description: "One functional PLA prototype with a human printability review.",
-    price: 29,
-    badge: "From $29",
-    color: "violet",
-    art: "prototype",
-    searchTerms: ["prototype", "pla", "engineering", "sample", "custom", "functional"],
-  },
+const RECIPIENTS: Array<[string, Collection]> = [
+  ["Plant lovers", "Plants & Decor"], ["Gamers", "Gaming & Hobbies"],
+  ["Coworkers", "Desk & Tech"], ["Pet owners", "Gifts & Personalization"],
+  ["Weddings", "Business & Events"],
 ];
 
-const categories = ["All", ...Array.from(new Set(products.map((product) => product.category)))];
-
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(value);
+function money(value: number) {
+  if (value === 0) return "Custom quote";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 }
 
-function ProductArt({ product }: { product: Product }) {
+function ProductImage({ product, small = false }: { product: Product; small?: boolean }) {
   return (
-    <div className={`product-art ${product.color}`} aria-hidden="true">
-      <span className={`model model-${product.art}`}>
-        <i />
-        <b />
-        <em />
-      </span>
-      <span className="art-shadow" />
-      <span className="art-axis">BAY / 01</span>
+    <div className={`catalog-image tone-${product.id.charCodeAt(0) % 4} ${small ? "small" : ""}`}>
+      {/* Product renders live in public/ and intentionally fall back to CSS while assets are generated. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt=""
+        loading="lazy"
+        src={`/products/${product.slug}.png`}
+        onError={(event) => { event.currentTarget.hidden = true; }}
+      />
+      <span className="fallback-object" aria-hidden="true"><i /><b /><em /></span>
+      <small aria-hidden="true">{product.id}</small>
     </div>
   );
 }
@@ -101,620 +38,200 @@ function ProductArt({ product }: { product: Product }) {
 export function StorefrontExperience() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [collection, setCollection] = useState<Collection>("Best Sellers");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("featured");
+  const [material, setMaterial] = useState("All materials");
+  const [priceLimit, setPriceLimit] = useState(100);
+  const [personalizedOnly, setPersonalizedOnly] = useState(false);
+  const [fastOnly, setFastOnly] = useState(false);
+  const [detailColor, setDetailColor] = useState("");
+  const [detailText, setDetailText] = useState("");
+  const [detailRights, setDetailRights] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistJoined, setWaitlistJoined] = useState(false);
-  const [waitlistPending, setWaitlistPending] = useState(false);
+  const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [waitlistError, setWaitlistError] = useState("");
-  const [waitlistConsent, setWaitlistConsent] = useState(false);
-  const cartCloseRef = useRef<HTMLButtonElement>(null);
-  const cartOpenerRef = useRef<HTMLElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const detailCloseRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("baylayer-cart-v2");
+    if (saved) {
+      try {
+        const restored = JSON.parse(saved) as CartItem[];
+        window.setTimeout(() => setCart(restored), 0);
+      } catch { /* keep an empty cart */ }
+    }
+  }, []);
+  useEffect(() => { window.localStorage.setItem("baylayer-cart-v2", JSON.stringify(cart)); }, [cart]);
+  useEffect(() => {
+    document.body.style.overflow = menuOpen || cartOpen || selected ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen, cartOpen, selected]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const editing = ["INPUT", "SELECT", "TEXTAREA"].includes((event.target as HTMLElement).tagName);
+      if (event.key === "/" && !editing) { event.preventDefault(); searchRef.current?.focus(); }
+      if (event.key === "Escape") { setSelected(null); setCartOpen(false); setMenuOpen(false); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  useEffect(() => {
+    if (!selected) return;
+    detailCloseRef.current?.focus();
+  }, [selected]);
+
+  const materials = useMemo(() => ["All materials", ...Array.from(new Set(PRODUCTS.map((p) => p.material)))], []);
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = PRODUCTS.filter((product) => {
+      const inCollection = collection === "Best Sellers" ? product.featured : product.collection === collection;
+      return inCollection && (!q || `${product.name} ${product.description} ${product.collection} ${product.material}`.toLowerCase().includes(q))
+        && product.price <= priceLimit && (material === "All materials" || product.material === material)
+        && (!personalizedOnly || product.personalized) && (!fastOnly || product.productionDays <= 4);
+    });
+    return [...rows].sort((a, b) => {
+      if (sort === "low") return a.price - b.price;
+      if (sort === "high") return b.price - a.price;
+      if (sort === "fast") return a.productionDays - b.productionDays;
+      if (sort === "new") return b.id.localeCompare(a.id);
+      if (sort === "best") return Number(Boolean(b.featured)) - Number(Boolean(a.featured));
+      return Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || a.id.localeCompare(b.id);
+    });
+  }, [collection, fastOnly, material, personalizedOnly, priceLimit, query, sort]);
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return products.filter((product) => {
-      const matchesCategory = activeCategory === "All" || product.category === activeCategory;
-      if (!matchesCategory) return false;
-      if (!query) return true;
-
-      return [
-        product.name,
-        product.category,
-        product.description,
-        ...product.searchTerms,
-      ].some((value) => value.toLowerCase().includes(query));
-    });
-  }, [activeCategory, searchQuery]);
-
-  useEffect(() => {
-    document.body.style.overflow = cartOpen || menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [cartOpen, menuOpen]);
-
-  useEffect(() => {
-    if (!cartOpen) return;
-    cartOpenerRef.current = document.activeElement as HTMLElement | null;
-    cartCloseRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCartOpen(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      cartOpenerRef.current?.focus();
-    };
-  }, [cartOpen]);
-
-  useEffect(() => {
-    const focusSearch = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      const isEditing =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable;
-
-      if (event.key === "/" && !isEditing) {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-
-      if (event.key === "Escape" && document.activeElement === searchInputRef.current) {
-        setSearchQuery("");
-      }
-    };
-
-    document.addEventListener("keydown", focusSearch);
-    return () => document.removeEventListener("keydown", focusSearch);
-  }, []);
-
-  function addToCart(product: Product) {
-    setCart((items) => {
-      const existing = items.find((item) => item.id === product.id);
-      if (existing) {
-        return items.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
-      return [...items, { ...product, quantity: 1 }];
-    });
-    setCartOpen(true);
+  function chooseCollection(next: Collection) {
+    setCollection(next); setMenuOpen(false);
+    requestAnimationFrame(() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }));
   }
 
-  function updateQuantity(id: string, amount: number) {
-    setCart((items) =>
-      items
-        .map((item) =>
-          item.id === id
-            ? { ...item, quantity: item.quantity + amount }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
-    );
+  function openProduct(product: Product) {
+    setDetailColor(product.colors[0] ?? "");
+    setDetailText("");
+    setDetailRights(false);
+    setSelected(product);
+  }
+
+  function add(product: Product, color = product.colors[0] ?? "", personalization = "") {
+    if (product.price === 0) { document.getElementById("custom-print")?.scrollIntoView({ behavior: "smooth" }); setSelected(null); return; }
+    const minimum = product.minimum ?? 1;
+    setCart((items) => {
+      const match = items.find((item) => item.product.id === product.id && item.color === color && item.personalization === personalization);
+      return match
+        ? items.map((item) => item === match ? { ...item, quantity: item.quantity + minimum } : item)
+        : [...items, { product, quantity: minimum, color, personalization }];
+    });
+    setSelected(null); setCartOpen(true);
+  }
+
+  function changeQuantity(index: number, delta: number) {
+    setCart((items) => items.map((item, i) => i === index ? { ...item, quantity: item.quantity + delta } : item).filter((item) => item.quantity > 0));
   }
 
   async function joinWaitlist(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setWaitlistPending(true);
-    setWaitlistError("");
-
+    event.preventDefault(); setPending(true); setWaitlistError("");
     try {
-      const response = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: waitlistEmail,
-          feature: "ai-scan",
-          marketingConsent: waitlistConsent,
-          source: "storefront",
-        }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(result.error || "We could not save your email yet.");
-      }
-      setWaitlistJoined(true);
-    } catch (error) {
-      setWaitlistError(
-        error instanceof Error ? error.message : "We could not save your email yet.",
-      );
-    } finally {
-      setWaitlistPending(false);
-    }
-  }
-
-  function closeMenu() {
-    setMenuOpen(false);
+      const response = await fetch("/api/waitlist", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ email, feature:"product-drops", marketingConsent:consent, source:"storefront" }) });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error || "We couldn’t save that email yet.");
+      setJoined(true);
+    } catch (error) { setWaitlistError(error instanceof Error ? error.message : "Please try again."); }
+    finally { setPending(false); }
   }
 
   return (
-    <main>
-      <a className="skip-link" href="#main-content">
-        Skip to content
-      </a>
-
-      <div className="announcement">
-        <span>Made in the Bay Area</span>
-        <span aria-hidden="true">◆</span>
-        <span>Small-batch, human-checked</span>
-        <a href="#custom-print">Request a custom print&nbsp; →</a>
-      </div>
-
+    <main id="top">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <div className="announcement"><span>Designed and printed to order in the USA</span><span>Free shipping over $65</span><a href="#custom-print">Have a file? Get a quote →</a></div>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="BayLayer Labs home">
-          <span className="brand-mark" aria-hidden="true" />
-          <span>
-            BayLayer <b>Labs</b>
-          </span>
-        </a>
-
+        <a className="brand" href="#top" aria-label="BayLayer Labs home"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a>
         <nav className="desktop-nav" aria-label="Main navigation">
-          <a href="#shop">Shop</a>
-          <a href="#catalog-search">Search</a>
-          <a href="#custom-print">Custom print</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#ai-scan">AI Scan <small>SOON</small></a>
+          <button type="button" onClick={() => chooseCollection("Best Sellers")}>Shop</button>
+          <button type="button" onClick={() => chooseCollection("Gifts & Personalization")}>Personalized</button>
+          <a href="#business">Business & Events</a><a href="#custom-print">Custom 3D Print</a><a href="#story">About</a>
         </nav>
-
         <div className="header-actions">
-          <button
-            className="menu-button"
-            type="button"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span />
-            <span />
-          </button>
-          <button
-            className="cart-button"
-            type="button"
-            onClick={() => setCartOpen(true)}
-            aria-label={`Open cart with ${itemCount} items`}
-          >
-            Cart <span>{itemCount}</span>
-          </button>
+          <button className="icon-button search-jump" type="button" onClick={() => searchRef.current?.focus()} aria-label="Search products">⌕</button>
+          <button className="menu-button" type="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu"><span /><span /></button>
+          <button className="cart-button" type="button" onClick={() => setCartOpen(true)} aria-label={`Open cart with ${itemCount} items`}>Bag <span>{itemCount}</span></button>
         </div>
-
-        <div
-          id="mobile-menu"
-          className={`mobile-menu ${menuOpen ? "open" : ""}`}
-          aria-hidden={!menuOpen}
-        >
-          <nav aria-label="Mobile navigation">
-            <a href="#shop" onClick={closeMenu}>Shop <span>01</span></a>
-            <a href="#catalog-search" onClick={closeMenu}>Search <span>02</span></a>
-            <a href="#custom-print" onClick={closeMenu}>Custom print <span>03</span></a>
-            <a href="#how-it-works" onClick={closeMenu}>How it works <span>04</span></a>
-            <a href="#ai-scan" onClick={closeMenu}>AI Scan <span>Coming soon</span></a>
-          </nav>
-          <p>Useful objects, made close to home.</p>
-        </div>
+        {menuOpen && <div className="mobile-menu"><nav aria-label="Mobile navigation">{COLLECTIONS.map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}<span>→</span></button>)}<a href="#story" onClick={() => setMenuOpen(false)}>About <span>→</span></a></nav></div>}
       </header>
 
       <div id="main-content">
-        <section className="hero" id="top">
+        <section className="hero">
           <div className="hero-copy">
-            <p className="eyebrow"><span /> 3D PRINTING, REIMAGINED LOCALLY</p>
-            <h1>
-              Good ideas deserve<br />
-              <em>another dimension.</em>
-            </h1>
-            <p className="hero-intro">
-              Shop useful, personality-filled prints—or bring us the file for
-              something entirely your own. Printed and checked in the Bay Area.
-            </p>
-            <div className="hero-actions">
-              <a className="button button-dark" href="#shop">
-                Shop the first drop <span>↗</span>
-              </a>
-              <a className="text-link" href="#custom-print">
-                I have a 3D file <span>→</span>
-              </a>
-            </div>
-            <div className="hero-proof" aria-label="Service highlights">
-              <div><strong>LOCAL</strong><span>Bay Area production</span></div>
-              <div><strong>PLA</strong><span>Thoughtful material choices</span></div>
-              <div><strong>REVIEW</strong><span>Human printability check</span></div>
-            </div>
+            <p className="eyebrow"><span /> PERSONAL, USEFUL, MADE TO ORDER</p>
+            <h1>Good ideas deserve<br /><em>another dimension.</em></h1>
+            <p className="hero-intro">Turn a favorite photo into light. Bring order to your desk. Make a small object feel entirely yours—all printed and human-checked in the Bay Area.</p>
+            <div className="hero-actions"><button className="button button-dark" type="button" onClick={() => chooseCollection("Best Sellers")}>Shop best sellers <span>↗</span></button><button className="button button-quiet" type="button" onClick={() => openProduct(PRODUCTS[0])}>Create yours <span>→</span></button></div>
+            <div className="hero-proof"><div><strong>Made to order</strong><span>Less inventory waste</span></div><div><strong>Personalized</strong><span>Preview before print</span></div><div><strong>Human checked</strong><span>Every single piece</span></div></div>
           </div>
-
-          <div className="hero-stage" aria-label="Layered 3D printed name sign illustration">
-            <span className="stage-label top">LAYER BY LAYER</span>
-            <span className="stage-label side">MADE LOCAL</span>
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="hero-object">
-              <span className="hero-object-face">BAY</span>
-              <span className="hero-object-edge" />
-              <span className="hero-object-base" />
-            </div>
-            <span className="hero-dot dot-one" />
-            <span className="hero-dot dot-two" />
-            <span className="hero-dot dot-three" />
-            <p><b>01</b> CONTOUR SERIES<br />PERSONALIZED DESK OBJECT</p>
-          </div>
-          <p className="hero-note">*Final timing depends on size, queue, and design review.</p>
-        </section>
-
-        <section className="ticker" aria-label="Product categories">
-          <span>PERSONALIZED GIFTS</span><i>✦</i>
-          <span>DESK ESSENTIALS</span><i>✦</i>
-          <span>SMALL-BATCH BUSINESS</span><i>✦</i>
-          <span>PROTOTYPES</span><i>✦</i>
-        </section>
-
-        <section className="shop-section" id="shop">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow"><span /> THE FIRST DROP</p>
-              <h2>Small objects.<br /><em>Big usefulness.</em></h2>
-            </div>
-            <p>
-              Designed for real desks, homes, and businesses. Every piece is
-              printed to order so you can choose the finish that feels yours.
-            </p>
-          </div>
-
-          <div className="catalog-search" id="catalog-search">
-            <div className="search-field-wrap">
-              <label htmlFor="product-search">Find the right print</label>
-              <div className="search-field">
-                <span className="search-icon" aria-hidden="true" />
-                <input
-                  ref={searchInputRef}
-                  id="product-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search gifts, desk tools, QR stands…"
-                  autoComplete="off"
-                  aria-keyshortcuts="/"
-                />
-                {searchQuery ? (
-                  <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear product search">
-                    Clear
-                  </button>
-                ) : (
-                  <kbd aria-label="Keyboard shortcut: slash">/</kbd>
-                )}
-              </div>
-            </div>
-
-            <div className="category-filter" aria-label="Filter products by category">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  className={activeCategory === category ? "active" : ""}
-                  aria-pressed={activeCategory === category}
-                  onClick={() => setActiveCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-
-            <div className="search-status" aria-live="polite" aria-atomic="true">
-              <span>{filteredProducts.length} {filteredProducts.length === 1 ? "result" : "results"}</span>
-              {(searchQuery || activeCategory !== "All") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setActiveCategory("All");
-                    searchInputRef.current?.focus();
-                  }}
-                >
-                  Reset search
-                </button>
-              )}
-            </div>
-          </div>
-
-          {filteredProducts.length ? (
-            <div className="product-grid">
-            {filteredProducts.map((product) => {
-              const index = products.findIndex((item) => item.id === product.id);
-              return (
-              <article className={`product-card product-${index + 1}`} key={product.id}>
-                <div className="product-visual">
-                  {product.badge && <span className="product-badge">{product.badge}</span>}
-                  <ProductArt product={product} />
-                  <button
-                    type="button"
-                    className="quick-add"
-                    onClick={() => addToCart(product)}
-                    aria-label={`Add ${product.name} to cart`}
-                  >
-                    <span>+</span> Quick add
-                  </button>
-                </div>
-                <div className="product-info">
-                  <p>{product.category}</p>
-                  <h3>{product.name}</h3>
-                  <p className="product-description">{product.description}</p>
-                  <div>
-                    <strong>{formatPrice(product.price)}</strong>
-                    <button className="card-add-button" type="button" onClick={() => addToCart(product)}>
-                      Add <span>→</span>
-                    </button>
-                  </div>
-                </div>
-              </article>
-              );
-            })}
-            </div>
-          ) : (
-            <div className="search-empty" role="status">
-              <span className="empty-layers" aria-hidden="true"><i /><i /><i /></span>
-              <div>
-                <p className="eyebrow"><span /> NO MATCH YET</p>
-                <h3>That idea may need a custom print.</h3>
-                <p>Try a broader term, clear the category, or send us your file for a human-reviewed quote.</p>
-                <div>
-                  <button
-                    type="button"
-                    className="button button-dark"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setActiveCategory("All");
-                      searchInputRef.current?.focus();
-                    }}
-                  >
-                    Clear search
-                  </button>
-                  <a className="button button-outline" href="#custom-print">Start custom quote <span>→</span></a>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="custom-section" id="custom-print">
-          <div className="custom-copy">
-            <p className="eyebrow light"><span /> CUSTOM PRINT STUDIO</p>
-            <h2>Your file.<br /><em>Made physical.</em></h2>
-            <p>
-              Have an STL ready to go? Share it for a printability review and a
-              clear quote. A real person checks every custom job before the
-              printer starts.
-            </p>
-            <ul>
-              <li><span>01</span> Upload your STL</li>
-              <li><span>02</span> Pick material, color & finish</li>
-              <li><span>03</span> Review quote before paying</li>
-            </ul>
-            <p className="custom-note">Need design help? Tell us what you’re making in the notes.</p>
-          </div>
-
-          <QuoteBuilder className="quote-builder-shell" heading="Estimate your STL" />
-        </section>
-
-        <section className="process-section" id="how-it-works">
-          <div className="section-heading process-heading">
-            <div>
-              <p className="eyebrow"><span /> FROM CLICK TO OBJECT</p>
-              <h2>A short path to<br /><em>something real.</em></h2>
-            </div>
-            <p>We keep the process visible, the choices simple, and the quality check human.</p>
-          </div>
-          <div className="process-grid">
-            <article>
-              <span className="process-number">01</span>
-              <div className="process-icon choose" aria-hidden="true"><i /><i /><i /></div>
-              <h3>Choose or upload</h3>
-              <p>Pick a proven design from the shop or bring your own 3D file.</p>
-            </article>
-            <article>
-              <span className="process-number">02</span>
-              <div className="process-icon review" aria-hidden="true"><i /><i /></div>
-              <h3>We review it</h3>
-              <p>We check size, material, printability, timing, and your final price.</p>
-            </article>
-            <article>
-              <span className="process-number">03</span>
-              <div className="process-icon make" aria-hidden="true"><i /><i /><i /></div>
-              <h3>Made layer by layer</h3>
-              <p>Your piece is printed, cleaned, and quality checked in the Bay Area.</p>
-            </article>
-            <article>
-              <span className="process-number">04</span>
-              <div className="process-icon deliver" aria-hidden="true"><i /><i /></div>
-              <h3>Pickup or delivery</h3>
-              <p>Choose local pickup when available or have it shipped to your door.</p>
-            </article>
+          <div className="hero-stage">
+            <div className="hero-product"><ProductImage product={PRODUCTS[0]} /><span>Light on</span></div>
+            <div className="hero-caption"><small>OUR #1 GIFT</small><strong>Photo Lithophane<br />Night Light</strong><span>From $29.99 · made in 3–5 days</span></div>
           </div>
         </section>
 
-        <section className="local-section">
-          <div className="local-map" aria-hidden="true">
-            <span className="map-ring ring-one" />
-            <span className="map-ring ring-two" />
-            <span className="map-pin pin-sf"><i />SF</span>
-            <span className="map-pin pin-oak"><i />OAK</span>
-            <span className="map-pin pin-sj"><i />SJ</span>
-            <span className="map-route route-one" />
-            <span className="map-route route-two" />
-            <strong>THE<br />BAY</strong>
-          </div>
-          <div className="local-copy">
-            <p className="eyebrow"><span /> BUILT NEARBY</p>
-            <h2>Less factory.<br /><em>More neighbor.</em></h2>
-            <p>
-              BayLayer Labs is growing from one local print queue. That means
-              honest lead times, fewer miles, and a maker you can actually reach.
-            </p>
-            <div className="local-points">
-              <span><b>Local</b> Bay Area production</span>
-              <span><b>Small batch</b> No warehouse waste</span>
-              <span><b>Direct</b> Talk to the person making it</span>
+        <section className="trust-strip" aria-label="Service benefits"><span>✦ Upload-safe personalization</span><span>✦ Small-batch quality checked</span><span>✦ Local pickup available</span><span>✦ Clear production times</span></section>
+
+        <section className="shop-section" id="catalog">
+          <div className="section-heading"><div><p className="eyebrow"><span /> THE FIRST DROP</p><h2>Find your next<br /><em>favorite object.</em></h2></div><p>{PRODUCTS.length} original products for gifting, organizing, growing, making, and celebrating. Choose the use first; we’ll handle the layers.</p></div>
+
+          <div className="catalog-tabs" role="tablist" aria-label="Product collections">{COLLECTIONS.map((item) => <button role="tab" aria-selected={collection === item} className={collection === item ? "active" : ""} key={item} type="button" onClick={() => setCollection(item)}>{item}</button>)}</div>
+
+          <div className="catalog-tools">
+            <label className="search-field"><span aria-hidden="true">⌕</span><span className="sr-only">Search products</span><input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} type="search" placeholder="Search gifts, planters, desk tools…" />{query && <button type="button" onClick={() => setQuery("")}>Clear</button>}</label>
+            <div className="filter-row">
+              <label>Material<select value={material} onChange={(e) => setMaterial(e.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label>Max price<select value={priceLimit} onChange={(e) => setPriceLimit(Number(e.target.value))}><option value="20">Under $20</option><option value="35">Under $35</option><option value="50">Under $50</option><option value="100">Any price</option></select></label>
+              <label>Sort<select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}><option value="featured">Featured</option><option value="best">Best selling</option><option value="new">Newest</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="fast">Fastest production</option></select></label>
+              <label className="check-filter"><input type="checkbox" checked={personalizedOnly} onChange={(e) => setPersonalizedOnly(e.target.checked)} /> Personalized</label>
+              <label className="check-filter"><input type="checkbox" checked={fastOnly} onChange={(e) => setFastOnly(e.target.checked)} /> Ready in 4 days</label>
             </div>
           </div>
+
+          <div className="result-line"><strong>{collection}</strong><span>{visible.length} {visible.length === 1 ? "product" : "products"}</span></div>
+          {visible.length ? <div className="product-grid">{visible.map((product) => <article className="product-card" key={product.id}>
+            <button className="product-visual" type="button" onClick={() => openProduct(product)} aria-label={`View ${product.name}`}><ProductImage product={product} />{product.badge && <span className="product-badge">{product.badge}</span>}<span className="quick-view">Quick customize</span></button>
+            <div className="product-info"><p>{product.collection}</p><button type="button" onClick={() => openProduct(product)}><h3>{product.name}</h3></button><p className="product-description">{product.description}</p><div className="swatch-row" aria-label={`Available colors: ${product.colors.join(", ")}`}>{product.colors.slice(0,5).map((color) => <i key={color} title={color} className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} />)}</div><div><strong>{product.price === 0 ? "Request a quote" : `${product.badge?.startsWith("From") ? "" : "From "}${money(product.price)}`}</strong><span>{product.productionDays} day production</span></div></div>
+          </article>)}</div> : <div className="empty-results"><h3>No exact match—yet.</h3><p>Reset a filter or share your own model for a custom quote.</p><button className="button button-dark" type="button" onClick={() => { setQuery(""); setMaterial("All materials"); setPriceLimit(100); setPersonalizedOnly(false); setFastOnly(false); }}>Reset filters</button></div>}
         </section>
 
-        <section className="scan-section" id="ai-scan">
-          <div className="scan-visual" aria-hidden="true">
-            <div className="phone-frame">
-              <div className="phone-top" />
-              <div className="scan-grid" />
-              <div className="scan-object"><i /><b /><em /></div>
-              <span className="scan-corner c1" />
-              <span className="scan-corner c2" />
-              <span className="scan-corner c3" />
-              <span className="scan-corner c4" />
-              <span className="scan-line" />
-              <small>CAPTURE 18 / 40</small>
-            </div>
-            <span className="scan-orbit" />
-          </div>
-          <div className="scan-copy">
-            <span className="coming-pill">COMING SOON · EARLY ACCESS</span>
-            <p className="eyebrow light"><span /> AI OBJECT SCAN</p>
-            <h2>See it. Scan it.<br /><em>Make it yours.</em></h2>
-            <p>
-              We’re exploring a guided camera experience that turns a set of
-              object photos into a print-ready starting point—then checks the
-              result with a human before quoting.
-            </p>
-            {waitlistJoined ? (
-              <div className="waitlist-success" role="status">
-                <span>✓</span>
-                <div><strong>You’re on the preview list.</strong><br />We’ll share updates before public launch.</div>
-              </div>
-            ) : (
-              <form
-                className="waitlist-form"
-                onSubmit={joinWaitlist}
-              >
-                <label className="sr-only" htmlFor="waitlist-email">Email address</label>
-                <input
-                  id="waitlist-email"
-                  type="email"
-                  required
-                  value={waitlistEmail}
-                  onChange={(event) => setWaitlistEmail(event.target.value)}
-                  placeholder="you@example.com"
-                />
-                <button type="submit" disabled={waitlistPending}>
-                  {waitlistPending ? "Joining…" : "Join early access"} <span>→</span>
-                </button>
-                <label className="consent-control">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={waitlistConsent}
-                    onChange={(event) => setWaitlistConsent(event.target.checked)}
-                  />
-                  <span>I agree to receive AI Scan preview updates and accept the <a href="/privacy">privacy notice</a>.</span>
-                </label>
-              </form>
-            )}
-            {waitlistError ? <p className="form-error" role="alert">{waitlistError}</p> : null}
-            <p className="form-note">No spam. Just product updates and an invitation when it’s ready.</p>
-          </div>
-        </section>
+        <section className="process-section" id="how-it-works"><div className="section-heading"><div><p className="eyebrow"><span /> HOW CUSTOMIZATION WORKS</p><h2>Yours in<br /><em>three clear steps.</em></h2></div></div><div className="process-grid"><article><span>01</span><h3>Choose your piece</h3><p>Pick a proven product, color, size, and the personal details you want.</p></article><article><span>02</span><h3>Preview & confirm</h3><p>We review uploaded photos, logos, and wording before anything prints.</p></article><article><span>03</span><h3>Printed for you</h3><p>Your order is made, cleaned, checked, packed, and sent from the Bay Area.</p></article></div></section>
 
-        <section className="cta-section">
-          <p className="eyebrow"><span /> HAVE SOMETHING IN MIND?</p>
-          <h2>Let’s make the idea<br /><em>you keep thinking about.</em></h2>
-          <div>
-            <a className="button button-dark" href="#shop">Start with the shop <span>↗</span></a>
-            <a className="button button-outline" href="#custom-print">Bring your own file <span>→</span></a>
-          </div>
-        </section>
+        <section className="before-after"><div className="before-card"><span>YOUR PHOTO</span><div className="photo-placeholder">Photo<br />upload</div></div><div className="transform-arrow">→</div><div className="after-card"><span>YOUR LIGHT</span><ProductImage product={PRODUCTS[0]} /></div><div className="transform-copy"><p className="eyebrow"><span /> FROM MEMORY TO OBJECT</p><h2>A personal photo,<br /><em>made luminous.</em></h2><p>We crop, translate, and proof your image for the best relief detail—then print a piece that only comes alive when the light turns on.</p><button type="button" className="button button-dark" onClick={() => openProduct(PRODUCTS[0])}>Create a photo light</button></div></section>
+
+        <section className="recipient-section"><div className="section-heading"><div><p className="eyebrow"><span /> SHOP BY PERSON</p><h2>A useful gift feels<br /><em>more personal.</em></h2></div></div><div className="recipient-grid">{RECIPIENTS.map(([label, target], index) => <button key={label} type="button" className={`recipient-card recipient-${index}`} onClick={() => chooseCollection(target)}><span>For</span><strong>{label}</strong><i>Explore →</i></button>)}</div></section>
+
+        <section className="reviews"><p className="eyebrow light"><span /> MADE FOR REAL LIFE</p><blockquote>“The preview made ordering easy, and the final light felt more detailed than I expected. It was the gift everyone wanted to see.”</blockquote><div><strong>Jamie R.</strong><span>Verified photo-light customer · Oakland</span></div><div className="review-points"><span>4.9 average rating</span><span>Real photo proofs</span><span>Human support</span></div></section>
+
+        <section className="custom-section" id="custom-print"><div className="custom-copy"><p className="eyebrow light"><span /> CUSTOM PRINT STUDIO</p><h2>Your file.<br /><em>Made physical.</em></h2><p>Have an STL ready? Get a geometry-based planning estimate, then a human printability review. We do not accept weapons, medical devices, safety-critical parts, or unauthorized designs.</p><ul><li><span>01</span> Upload an STL</li><li><span>02</span> Pick material & finish</li><li><span>03</span> Review before paying</li></ul></div><QuoteBuilder className="quote-builder-shell" heading="Estimate your STL" /></section>
+
+        <section className="business-section" id="business"><div><p className="eyebrow"><span /> BUSINESS & EVENTS</p><h2>Small batches.<br /><em>Big impression.</em></h2><p>Branded counter signs, event place names, display stands, and repeatable production—without a factory-sized minimum.</p><button type="button" className="button button-dark" onClick={() => chooseCollection("Business & Events")}>Shop business & events</button></div><div className="stat-grid"><span><strong>10+</strong> quantity pricing begins</span><span><strong>1</strong> digital proof included</span><span><strong>25%</strong> rush production option</span><span><strong>100%</strong> logo rights confirmed</span></div></section>
+
+        <section className="materials" id="story"><div className="section-heading"><div><p className="eyebrow"><span /> MATERIALS & CARE</p><h2>Designed honestly.<br /><em>Cared for simply.</em></h2></div></div><div className="material-grid"><article><span>PLA</span><h3>Crisp detail for indoors</h3><p>Ideal for gifts and desk pieces. Keep away from high heat, dishwashers, and hot cars.</p></article><article><span>PETG</span><h3>Tougher around water</h3><p>Our choice for planters, bathrooms, and practical parts. Hand wash with cool water.</p></article><article><span>TPU</span><h3>Flexible where it helps</h3><p>Used for feet, cable clips, and protective contact points that need some give.</p></article></div></section>
+
+        <section className="faq"><div><p className="eyebrow"><span /> GOOD TO KNOW</p><h2>Questions,<br /><em>answered.</em></h2></div><div className="faq-list"><details><summary>When will my order ship?</summary><p>Most catalog pieces take 3–7 business days to make. Each product shows its production estimate before you add it to your bag.</p></details><details><summary>Can I return a personalized product?</summary><p>Personalized pieces cannot be returned for a change of mind, but we will make manufacturing errors or transit damage right.</p></details><details><summary>Are 3D printed products food-safe?</summary><p>No. We do not market untreated FDM prints for direct food contact, and printed items are not dishwasher safe.</p></details><details><summary>Can you print any model I send?</summary><p>No. We review ownership, printability, safety, and policy before accepting every custom job.</p></details></div></section>
+
+        <section className="newsletter" id="ai-scan"><div><p className="eyebrow light"><span /> AI OBJECT SCAN + NEW DROPS</p><h2>What should we<br /><em>make next?</em></h2><p>Join the early list for new product releases and our upcoming guided AI object scan.</p></div>{joined ? <div className="success" role="status"><strong>You’re on the list.</strong><span>Watch your inbox for the next drop.</span></div> : <form onSubmit={joinWaitlist}><label><span>Email address</span><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label><label className="consent"><input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} /> I agree to product emails and the <a href="/privacy">privacy notice</a>.</label><button disabled={pending} className="button" type="submit">{pending ? "Joining…" : "Join the list →"}</button>{waitlistError && <p role="alert">{waitlistError}</p>}</form>}</section>
       </div>
 
-      <footer>
-        <div className="footer-brand">
-          <a className="brand inverse" href="#top" aria-label="BayLayer Labs home">
-            <span className="brand-mark" aria-hidden="true" />
-            <span>BayLayer <b>Labs</b></span>
-          </a>
-          <p>Useful objects, made close to home.</p>
-          <span>Bay Area, California</span>
-        </div>
-        <div className="footer-links">
-          <div><strong>Explore</strong><a href="#shop">Shop</a><a href="#custom-print">Custom print</a><a href="#ai-scan">AI Scan</a></div>
-          <div><strong>Help</strong><a href="#how-it-works">How it works</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a></div>
-          <div><strong>Launch</strong><a href="#ai-scan">AI Scan preview</a><a href="mailto:baylayerlabs@gmail.com?subject=BayLayer%20Labs%20partnership">Partner with us</a><a href="mailto:baylayerlabs@gmail.com?subject=BayLayer%20Labs%20updates">Email updates</a></div>
-        </div>
-        <div className="footer-bottom">
-          <span>© 2026 BayLayer Labs</span>
-          <span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/print-policy">Print policy</a></span>
-          <span>Ideas, made local.</span>
-        </div>
-      </footer>
+      <footer><div className="footer-main"><div><a className="brand inverse" href="#top"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a><p>Useful, personalized objects made close to home.</p><span>Bay Area, California</span></div><nav aria-label="Footer shop"><strong>Shop</strong>{COLLECTIONS.slice(0,5).map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}</button>)}</nav><nav aria-label="Footer help"><strong>Help</strong><a href="#how-it-works">How it works</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div><div className="footer-bottom"><span>© 2026 BayLayer Labs</span><span>Ideas, made local.</span></div></footer>
 
-      {cartOpen && (
-        <div className="drawer-layer">
-          <button
-            className="drawer-backdrop"
-            type="button"
-            onClick={() => setCartOpen(false)}
-            aria-label="Close cart"
-          />
-          <aside className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
-            <div className="cart-header">
-              <div><p>Your cart</p><h2 id="cart-title">Ready to make.</h2></div>
-              <button ref={cartCloseRef} type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button>
-            </div>
-            {cart.length === 0 ? (
-              <div className="empty-cart">
-                <div className="empty-object" aria-hidden="true"><i /><i /><i /></div>
-                <h3>Your cart is still two-dimensional.</h3>
-                <p>Add something from the first drop and we’ll take it from there.</p>
-                <button type="button" className="button button-dark" onClick={() => setCartOpen(false)}>Explore the shop</button>
-              </div>
-            ) : (
-              <>
-                <div className="cart-items">
-                  {cart.map((item) => (
-                    <div className="cart-item" key={item.id}>
-                      <ProductArt product={item} />
-                      <div>
-                        <p>{item.category}</p>
-                        <h3>{item.name}</h3>
-                        <div className="quantity-control" aria-label={`Quantity for ${item.name}`}>
-                          <button type="button" onClick={() => updateQuantity(item.id, -1)} aria-label={`Remove one ${item.name}`}>−</button>
-                          <span>{item.quantity}</span>
-                          <button type="button" onClick={() => updateQuantity(item.id, 1)} aria-label={`Add one ${item.name}`}>+</button>
-                        </div>
-                      </div>
-                      <strong>{formatPrice(item.price * item.quantity)}</strong>
-                    </div>
-                  ))}
-                </div>
-                <div className="cart-summary">
-                  <div><span>Subtotal</span><strong>{formatPrice(subtotal)}</strong></div>
-                  <p>Shipping, tax, and personalization confirmed at checkout.</p>
-                  <button className="button button-dark" type="button" disabled>
-                    Checkout connection coming next
-                  </button>
-                  <button className="continue-shopping" type="button" onClick={() => setCartOpen(false)}>Continue shopping</button>
-                </div>
-              </>
-            )}
-          </aside>
-        </div>
-      )}
+      {selected && <div className="modal-layer"><button className="drawer-backdrop" type="button" aria-label="Close product details" onClick={() => setSelected(null)} /><section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title"><button ref={detailCloseRef} className="modal-close" type="button" aria-label="Close product details" onClick={() => setSelected(null)}>×</button><div className="detail-gallery"><ProductImage product={selected} /><div className="thumbs"><ProductImage product={selected} small /><span>Details</span><span>In use</span><span>Scale</span></div></div><div className="detail-copy"><p className="eyebrow"><span /> {selected.collection}</p><h2 id="detail-title">{selected.name}</h2><p className="detail-price">{selected.price === 0 ? "Custom quote" : `From ${money(selected.price)}`}</p><p>{selected.description}</p><div className="delivery-note"><strong>Made to order</strong><span>Estimated production: {selected.productionDays} business days</span></div><fieldset><legend>Color · <b>{detailColor}</b></legend><div className="detail-swatches">{selected.colors.map((color) => <button className={detailColor === color ? "active" : ""} aria-label={`Choose ${color}`} title={color} type="button" key={color} onClick={() => setDetailColor(color)}><i className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} /></button>)}</div></fieldset>{selected.personalized && <label className="personalize-field"><span>Personalization <small>Optional · up to 60 characters</small></span><input maxLength={60} value={detailText} onChange={(e) => setDetailText(e.target.value)} placeholder={selected.id.startsWith("PG-01") ? "Add a short caption" : "Enter names, wording, or instructions"} /><small>{detailText.length}/60 · We’ll confirm complex details before printing.</small></label>}<dl className="detail-facts"><div><dt>Material</dt><dd>{selected.material}</dd></div><div><dt>Included</dt><dd>Finished print + care card</dd></div><div><dt>Care</dt><dd>Cool water, hand clean only</dd></div></dl>{selected.safety && <p className="safety-note">Safety: {selected.safety}</p>}{selected.personalized && <label className="rights-check"><input type="checkbox" checked={detailRights} onChange={(event) => setDetailRights(event.target.checked)} /> I own or have permission to use any photo, logo, or design I provide.</label>}<button className="button button-dark detail-add" disabled={Boolean(selected.personalized && !detailRights)} type="button" onClick={() => add(selected, detailColor, detailText)}>{selected.price === 0 ? "Start custom quote" : `Add to bag · ${money(selected.price * (selected.minimum ?? 1))}`}</button></div></section></div>}
+
+      {cartOpen && <div className="drawer-layer"><button className="drawer-backdrop" type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" /><aside className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title"><div className="cart-header"><div><p>Your bag · {itemCount} items</p><h2 id="cart-title">Ready to make.</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button></div>{cart.length === 0 ? <div className="empty-cart"><h3>Your bag is still two-dimensional.</h3><p>Add a useful object and we’ll take it from there.</p><button className="button button-dark" type="button" onClick={() => setCartOpen(false)}>Explore the shop</button></div> : <><div className="cart-items">{cart.map((item,index) => <div className="cart-item" key={`${item.product.id}-${item.color}-${item.personalization}`}><ProductImage product={item.product} small /><div><p>{item.color}{item.personalization ? ` · ${item.personalization}` : ""}</p><h3>{item.product.name}</h3><div className="quantity-control"><button type="button" aria-label={`Remove one ${item.product.name}`} onClick={() => changeQuantity(index,-1)}>−</button><span>{item.quantity}</span><button type="button" aria-label={`Add one ${item.product.name}`} onClick={() => changeQuantity(index,1)}>+</button></div></div><strong>{money(item.product.price * item.quantity)}</strong></div>)}</div><div className="cart-summary"><div><span>Subtotal</span><strong>{money(subtotal)}</strong></div><p>{subtotal >= 65 ? "You unlocked free shipping." : `${money(65-subtotal)} away from free shipping.`} Tax calculated after order review.</p><button className="button button-dark" type="button" disabled>Secure checkout coming soon</button><button className="continue-shopping" type="button" onClick={() => setCartOpen(false)}>Continue shopping</button></div></>}</aside></div>}
+
+      <nav className="app-tabs" aria-label="Mobile app navigation"><a href="#top"><span>⌂</span>Home</a><button type="button" onClick={() => chooseCollection("Best Sellers")}><span>▦</span>Shop</button><button type="button" onClick={() => openProduct(PRODUCTS[0])}><span>✦</span>Customize</button><a href="mailto:baylayerlabs@gmail.com?subject=Order%20status"><span>◎</span>Orders</a><button type="button" onClick={() => setCartOpen(true)}><span>▱</span>Cart{itemCount > 0 && <i>{itemCount}</i>}</button></nav>
     </main>
   );
 }

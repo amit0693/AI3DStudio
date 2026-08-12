@@ -17,7 +17,8 @@ export default function RootLayout() {
           headerBackButtonDisplayMode: 'minimal',
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="product/[slug]" options={{ title: 'Product details' }} />
+        <Stack.Screen name="product/[slug]" options={{ title: 'Product details', presentation: 'card' }} />
+        <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'card' }} />
       </Stack>
     </AppProvider>
   );

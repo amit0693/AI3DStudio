@@ -2,8 +2,8 @@
   "expo": {
     "name": "BayLayer Labs",
     "slug": "baylayer-labs-mobile",
-    "description": "Browse locally made 3D prints and request server-verified STL estimates from BayLayer Labs.",
-    "version": "1.0.0",
+    "description": "Shop personalized gifts and practical 3D prints, or request a server-verified STL estimate from BayLayer Labs.",
+    "version": "1.1.0",
     "backgroundColor": "#F6F1E7",
     "primaryColor": "#123C35",
     "orientation": "portrait",
