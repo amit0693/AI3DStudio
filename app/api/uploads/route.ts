@@ -149,7 +149,6 @@ export async function POST(request: Request) {
     const objectKey = `models/${now.getUTCFullYear()}/${String(
       now.getUTCMonth() + 1,
     ).padStart(2, "0")}/${uploadId}.${format}`;
-    uploadedObjectKey = objectKey;
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     await getUploadsBucket().put(objectKey, bytes, {
@@ -160,6 +159,7 @@ export async function POST(request: Request) {
         sha256: checksum,
       },
     });
+    uploadedObjectKey = objectKey;
 
     const db = getD1();
     await db.batch([

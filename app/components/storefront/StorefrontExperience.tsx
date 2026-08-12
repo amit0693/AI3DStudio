@@ -3,6 +3,7 @@
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
 import { LAUNCH_COLLECTIONS, type Collection, type Product, LAUNCH_PRODUCTS } from "@/app/data/catalog";
+import { readJsonResponse } from "@/lib/http/json";
 import styles from "./StorefrontExperience.module.css";
 
 type CustomizationField = {
@@ -286,7 +287,10 @@ export function StorefrontExperience() {
           } satisfies CartItem];
         });
         window.setTimeout(() => setCart(safeItems), 0);
-      } catch { /* keep an empty cart */ }
+      } catch (error) {
+        // A saved cart that cannot be restored must not break the storefront.
+        console.warn("Saved cart could not be restored", error);
+      }
     }
   }, []);
   useEffect(() => {
@@ -465,12 +469,11 @@ export function StorefrontExperience() {
           const uploadForm = new FormData();
           uploadForm.append("file", file);
           const uploadResponse = await fetch("/api/personalization-uploads", { method: "POST", body: uploadForm });
-          const uploadResult = await uploadResponse.json() as {
-            error?: string;
+          const uploadResult = await readJsonResponse<{
             upload?: { id: string; accessToken: string; filename: string };
-          };
-          if (!uploadResponse.ok || !uploadResult.upload) {
-            throw new Error(uploadResult.error || `We could not securely upload ${file.name}.`);
+          }>(uploadResponse, `We could not securely upload ${file.name}.`);
+          if (!uploadResult.upload) {
+            throw new Error(`We could not securely upload ${file.name}.`);
           }
           personalization[fieldKey] = uploadResult.upload.id;
           personalization[`${fieldKey}Token`] = uploadResult.upload.accessToken;
@@ -510,12 +513,10 @@ export function StorefrontExperience() {
         },
         body: JSON.stringify(body),
       });
-      const result = await response.json() as {
-        error?: string;
+      const result = await readJsonResponse<{
         order?: { orderNumber?: string; trackingToken?: string };
         checkout?: { available?: boolean; url?: string; message?: string };
-      };
-      if (!response.ok) throw new Error(result.error || "We could not prepare this order.");
+      }>(response, "We could not prepare this order.");
       if (result.checkout?.url) {
         window.location.assign(result.checkout.url);
         return;
@@ -533,8 +534,7 @@ export function StorefrontExperience() {
     event.preventDefault(); setPending(true); setWaitlistError("");
     try {
       const response = await fetch("/api/waitlist", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ email, feature:"product-drops", marketingConsent:consent, source:"storefront" }) });
-      const body = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(body.error || "We couldn’t save that email yet.");
+      await readJsonResponse<{ joined?: boolean }>(response, "We couldn’t save that email yet.");
       setJoined(true);
     } catch (error) { setWaitlistError(error instanceof Error ? error.message : "Please try again."); }
     finally { setPending(false); }

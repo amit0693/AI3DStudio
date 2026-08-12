@@ -5,12 +5,12 @@ import {
   MATERIAL_OPTIONS,
   QUALITY_OPTIONS,
 } from "@/lib/quote/config";
+import { readJsonResponse } from "@/lib/http/json";
 import { inspectStl } from "@/lib/quote/stl";
 import type {
   GeometryReport,
   MaterialKey,
   QualityKey,
-  QuoteErrorResponse,
   QuoteEstimate,
 } from "@/lib/quote/types";
 import styles from "./QuoteBuilder.module.css";
@@ -92,10 +92,10 @@ export function QuoteBuilder({
         method: "POST",
         body: form,
       });
-      const body = (await response.json()) as QuoteEstimate | QuoteErrorResponse;
-      if (!response.ok || "error" in body) {
-        throw new Error("error" in body ? body.error : "Quote request failed.");
-      }
+      const body = await readJsonResponse<QuoteEstimate>(
+        response,
+        "We could not calculate this estimate.",
+      );
       setEstimate(body);
       setGeometry(body.geometry);
     } catch (requestError) {

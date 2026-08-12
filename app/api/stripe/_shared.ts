@@ -21,9 +21,17 @@ export async function stripeRequest<T>(
     headers,
     body: init.body,
   });
-  const payload = (await response.json()) as T & { error?: { message?: string } };
-  if (!response.ok) {
-    throw new Error(payload.error?.message || "Stripe could not start checkout.");
+  const text = await response.text();
+  let payload: (T & { error?: { message?: string } }) | null = null;
+  try {
+    payload = text.trim() ? (JSON.parse(text) as T & { error?: { message?: string } }) : null;
+  } catch (error) {
+    console.error(`Stripe returned a non-JSON response for ${path}`, error);
+  }
+  if (!response.ok || !payload) {
+    throw new Error(
+      payload?.error?.message || `Stripe could not start checkout (HTTP ${response.status}).`,
+    );
   }
   return payload;
 }

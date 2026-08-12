@@ -23,7 +23,12 @@ export default function SettingsScreen() {
       setError('Enter a complete http:// or https:// URL.');
       return;
     }
-    await setApiBaseUrl(normalized);
+    try {
+      await setApiBaseUrl(normalized);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'We could not save this URL.');
+      return;
+    }
     setDraft(normalized);
     setSaved(true);
   }

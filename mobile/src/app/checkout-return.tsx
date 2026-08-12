@@ -23,7 +23,10 @@ export default function CheckoutReturnScreen() {
           setMessage('Payment is not verified yet. Your cart is preserved; open Orders and pull to refresh.');
         }
       })
-      .catch(() => active && setMessage('Status is temporarily unavailable. Your cart is preserved; open Orders and pull to refresh.'));
+      .catch((error: unknown) => {
+        console.error('Verified payment status could not be read', error);
+        if (active) setMessage('Status is temporarily unavailable. Your cart is preserved; open Orders and pull to refresh.');
+      });
     return () => { active = false; };
   }, [apiBaseUrl, clearCart, token]);
 

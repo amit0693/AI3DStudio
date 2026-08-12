@@ -52,7 +52,8 @@ function hydrateCart(value: string | null): CartItem[] {
         options: item.options,
       }];
     });
-  } catch {
+  } catch (error) {
+    console.warn('Stored cart could not be parsed', error);
     return [];
   }
 }
@@ -77,16 +78,26 @@ export function AppProvider({ children }: PropsWithChildren) {
           if (Array.isArray(parsed)) setSavedOrders(parsed.filter((order) => order?.trackingToken && order?.orderNumber));
         }
       })
-      .catch(() => undefined)
+      .catch((error: unknown) => {
+        // A stored cart or API URL that cannot be read must not block startup.
+        console.warn('Stored app state could not be restored', error);
+      })
       .finally(() => setHydrated(true));
   }, []);
 
   useEffect(() => {
-    if (hydrated) AsyncStorage.setItem(CART_KEY, JSON.stringify(cart)).catch(() => undefined);
+    if (!hydrated) return;
+    AsyncStorage.setItem(CART_KEY, JSON.stringify(cart)).catch((error: unknown) => {
+      console.warn('The cart could not be saved for the next launch', error);
+    });
   }, [cart, hydrated]);
 
   useEffect(() => {
-    if (hydrated) AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(savedOrders)).catch(() => undefined);
+    if (hydrated) {
+      AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(savedOrders)).catch((error: unknown) => {
+        console.warn('Saved orders could not be stored for the next launch', error);
+      });
+    }
   }, [savedOrders, hydrated]);
 
   const refreshCatalog = useCallback(async () => {

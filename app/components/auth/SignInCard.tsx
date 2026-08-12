@@ -30,7 +30,11 @@ export function SignInCard({ returnTo }: { returnTo: string }) {
     fetch("/api/auth/config", { cache: "no-store" })
       .then((response) => response.json())
       .then((value: AuthConfig) => setConfig(value))
-      .catch(() => setConfig({ enabled: false, google: false, emailOtp: false }));
+      .catch((error: unknown) => {
+        // Sign-in degrades to unavailable when the config cannot be read.
+        console.error("Auth configuration could not be loaded", error);
+        setConfig({ enabled: false, google: false, emailOtp: false });
+      });
   }, []);
 
   async function signInWithGoogle() {

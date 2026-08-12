@@ -27,7 +27,11 @@ export default function SignInScreen() {
   useEffect(() => {
     void fetchAuthConfig()
       .then(setConfig)
-      .catch(() => setConfig({ enabled: false, google: false, emailOtp: false }));
+      .catch((error: unknown) => {
+        // Sign-in degrades to unavailable when the config cannot be read.
+        console.error('Auth configuration could not be loaded', error);
+        setConfig({ enabled: false, google: false, emailOtp: false });
+      });
   }, []);
 
   useEffect(() => {
