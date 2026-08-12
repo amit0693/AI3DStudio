@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
 
 type Product = {
@@ -12,6 +12,7 @@ type Product = {
   badge?: string;
   color: string;
   art: string;
+  searchTerms: string[];
 };
 
 type CartItem = Product & { quantity: number };
@@ -26,6 +27,7 @@ const products: Product[] = [
     badge: "Launch collection",
     color: "mint",
     art: "name-sign",
+    searchTerms: ["name", "sign", "personalized", "desk", "gift", "custom"],
   },
   {
     id: "qr-stand",
@@ -36,6 +38,7 @@ const products: Product[] = [
     badge: "For local business",
     color: "orange",
     art: "qr-stand",
+    searchTerms: ["qr", "wifi", "menu", "reviews", "counter", "business"],
   },
   {
     id: "cable-kit",
@@ -45,6 +48,7 @@ const products: Product[] = [
     price: 18,
     color: "blue",
     art: "cable-kit",
+    searchTerms: ["cable", "clips", "organizer", "desk", "home", "tidy"],
   },
   {
     id: "lithophane",
@@ -55,6 +59,7 @@ const products: Product[] = [
     badge: "Gift-ready",
     color: "yellow",
     art: "light-panel",
+    searchTerms: ["photo", "memory", "light", "lithophane", "gift", "keepsake"],
   },
   {
     id: "prototype",
@@ -65,8 +70,11 @@ const products: Product[] = [
     badge: "From $29",
     color: "violet",
     art: "prototype",
+    searchTerms: ["prototype", "pla", "engineering", "sample", "custom", "functional"],
   },
 ];
+
+const categories = ["All", ...Array.from(new Set(products.map((product) => product.category)))];
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -94,6 +102,8 @@ export function StorefrontExperience() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistJoined, setWaitlistJoined] = useState(false);
   const [waitlistPending, setWaitlistPending] = useState(false);
@@ -101,12 +111,30 @@ export function StorefrontExperience() {
   const [waitlistConsent, setWaitlistConsent] = useState(false);
   const cartCloseRef = useRef<HTMLButtonElement>(null);
   const cartOpenerRef = useRef<HTMLElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const matchesCategory = activeCategory === "All" || product.category === activeCategory;
+      if (!matchesCategory) return false;
+      if (!query) return true;
+
+      return [
+        product.name,
+        product.category,
+        product.description,
+        ...product.searchTerms,
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [activeCategory, searchQuery]);
 
   useEffect(() => {
     document.body.style.overflow = cartOpen || menuOpen ? "hidden" : "";
@@ -128,6 +156,30 @@ export function StorefrontExperience() {
       cartOpenerRef.current?.focus();
     };
   }, [cartOpen]);
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      const isEditing =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable;
+
+      if (event.key === "/" && !isEditing) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      if (event.key === "Escape" && document.activeElement === searchInputRef.current) {
+        setSearchQuery("");
+      }
+    };
+
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
+  }, []);
 
   function addToCart(product: Product) {
     setCart((items) => {
@@ -205,11 +257,7 @@ export function StorefrontExperience() {
 
       <header className="site-header">
         <a className="brand" href="#top" aria-label="BayLayer Labs home">
-          <span className="brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          <span className="brand-mark" aria-hidden="true" />
           <span>
             BayLayer <b>Labs</b>
           </span>
@@ -217,6 +265,7 @@ export function StorefrontExperience() {
 
         <nav className="desktop-nav" aria-label="Main navigation">
           <a href="#shop">Shop</a>
+          <a href="#catalog-search">Search</a>
           <a href="#custom-print">Custom print</a>
           <a href="#how-it-works">How it works</a>
           <a href="#ai-scan">AI Scan <small>SOON</small></a>
@@ -251,8 +300,9 @@ export function StorefrontExperience() {
         >
           <nav aria-label="Mobile navigation">
             <a href="#shop" onClick={closeMenu}>Shop <span>01</span></a>
-            <a href="#custom-print" onClick={closeMenu}>Custom print <span>02</span></a>
-            <a href="#how-it-works" onClick={closeMenu}>How it works <span>03</span></a>
+            <a href="#catalog-search" onClick={closeMenu}>Search <span>02</span></a>
+            <a href="#custom-print" onClick={closeMenu}>Custom print <span>03</span></a>
+            <a href="#how-it-works" onClick={closeMenu}>How it works <span>04</span></a>
             <a href="#ai-scan" onClick={closeMenu}>AI Scan <span>Coming soon</span></a>
           </nav>
           <p>Useful objects, made close to home.</p>
@@ -323,8 +373,67 @@ export function StorefrontExperience() {
             </p>
           </div>
 
-          <div className="product-grid">
-            {products.map((product, index) => (
+          <div className="catalog-search" id="catalog-search">
+            <div className="search-field-wrap">
+              <label htmlFor="product-search">Find the right print</label>
+              <div className="search-field">
+                <span className="search-icon" aria-hidden="true" />
+                <input
+                  ref={searchInputRef}
+                  id="product-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search gifts, desk tools, QR stands…"
+                  autoComplete="off"
+                  aria-keyshortcuts="/"
+                />
+                {searchQuery ? (
+                  <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear product search">
+                    Clear
+                  </button>
+                ) : (
+                  <kbd aria-label="Keyboard shortcut: slash">/</kbd>
+                )}
+              </div>
+            </div>
+
+            <div className="category-filter" aria-label="Filter products by category">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={activeCategory === category ? "active" : ""}
+                  aria-pressed={activeCategory === category}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
+            <div className="search-status" aria-live="polite" aria-atomic="true">
+              <span>{filteredProducts.length} {filteredProducts.length === 1 ? "result" : "results"}</span>
+              {(searchQuery || activeCategory !== "All") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setActiveCategory("All");
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  Reset search
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredProducts.length ? (
+            <div className="product-grid">
+            {filteredProducts.map((product) => {
+              const index = products.findIndex((item) => item.id === product.id);
+              return (
               <article className={`product-card product-${index + 1}`} key={product.id}>
                 <div className="product-visual">
                   {product.badge && <span className="product-badge">{product.badge}</span>}
@@ -344,14 +453,39 @@ export function StorefrontExperience() {
                   <p className="product-description">{product.description}</p>
                   <div>
                     <strong>{formatPrice(product.price)}</strong>
-                    <button type="button" onClick={() => addToCart(product)}>
+                    <button className="card-add-button" type="button" onClick={() => addToCart(product)}>
                       Add <span>→</span>
                     </button>
                   </div>
                 </div>
               </article>
-            ))}
-          </div>
+              );
+            })}
+            </div>
+          ) : (
+            <div className="search-empty" role="status">
+              <span className="empty-layers" aria-hidden="true"><i /><i /><i /></span>
+              <div>
+                <p className="eyebrow"><span /> NO MATCH YET</p>
+                <h3>That idea may need a custom print.</h3>
+                <p>Try a broader term, clear the category, or send us your file for a human-reviewed quote.</p>
+                <div>
+                  <button
+                    type="button"
+                    className="button button-dark"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setActiveCategory("All");
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    Clear search
+                  </button>
+                  <a className="button button-outline" href="#custom-print">Start custom quote <span>→</span></a>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="custom-section" id="custom-print">
@@ -511,7 +645,7 @@ export function StorefrontExperience() {
       <footer>
         <div className="footer-brand">
           <a className="brand inverse" href="#top" aria-label="BayLayer Labs home">
-            <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
+            <span className="brand-mark" aria-hidden="true" />
             <span>BayLayer <b>Labs</b></span>
           </a>
           <p>Useful objects, made close to home.</p>
