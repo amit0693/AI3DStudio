@@ -79,7 +79,7 @@ export default function ProductDetailScreen() {
       <Stack.Screen options={{ title: editing ? `Edit ${product.name}` : product.name }} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={88}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
-          <View style={styles.visualWrap}><ProductVisual product={product} height={280} /></View>
+          <View style={styles.visualWrap}><ProductVisual product={product} height={280} color={selectedColor} /></View>
           <View style={styles.badgeRow}>{product.badge ? <Pill tone="mint">{product.badge}</Pill> : null}<Pill tone="neutral">{product.category}</Pill></View>
           <Title>{product.name}</Title>
           <View style={styles.priceRow}><Text style={styles.price}>{formatMoney(product.price.amountCents, product.price.currency)}</Text><Text style={styles.lead}>{product.leadTimeDays.min}–{product.leadTimeDays.max} business days</Text></View>

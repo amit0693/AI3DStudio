@@ -67,7 +67,7 @@ export default function CompanyTracker() {
       </section>
 
       <section className="split-section">
-        <div className="launch-list"><div className="tracker-heading compact"><div><p>04 · ASSORTMENT</p><h2>Eight launch offers</h2></div></div>
+        <div className="launch-list"><div className="tracker-heading compact"><div><p>04 · ASSORTMENT</p><h2>{LAUNCH_PRODUCTS.length} launch offers</h2></div></div>
           {LAUNCH_PRODUCTS.map((product, index) => <article key={product.name}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{product.name}</h3><p>{product.segment} · {ownerName(product.owner)}</p></div><strong>{product.price}</strong></article>)}
         </div>
         <div className="roadmap"><div className="tracker-heading compact"><div><p>05 · DISTRIBUTION</p><h2>Channel sequence</h2></div></div>

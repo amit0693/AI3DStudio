@@ -15,6 +15,19 @@ const expected = [
   ["CP-02", 3900, 1],
   ["GH-04", 3999, 1],
   ["PD-01", 3199, 1],
+  ["PG-03", 2499, 1],
+  ["PG-04", 799, 1],
+  ["PD-02", 2999, 1],
+  ["PD-03", 3299, 1],
+  ["PD-04", 1699, 1],
+  ["GH-01", 1899, 1],
+  ["GH-05", 1499, 1],
+  ["GH-06", 2999, 1],
+  ["SE-01", 1499, 1],
+  ["SE-06", 1999, 1],
+  ["SE-07", 3499, 1],
+  ["BE-02", 4999, 1],
+  ["BE-05", 9900, 1],
 ];
 
 function text(path) {
@@ -30,6 +43,7 @@ test("all D1 migrations apply and seed the authoritative launch catalog", () => 
       "drizzle/0001_nervous_the_liberteens.sql",
       "drizzle/0002_wet_switch.sql",
       "drizzle/0003_closed_may_parker.sql",
+      "drizzle/0005_launch_catalog_expansion.sql",
     ]) {
       execFileSync("sqlite3", [database, `.read ${new URL(migration, root).pathname}`]);
     }
@@ -51,7 +65,7 @@ test("all D1 migrations apply and seed the authoritative launch catalog", () => 
   }
 });
 
-test("web research catalog exposes only the same eight launch offers", () => {
+test("web research catalog exposes only the same launch offers as the database", () => {
   const catalog = text("app/data/catalog.ts");
   const launchIds = [...catalog.matchAll(/id:"([A-Z]{2}-\d{2})"[^\n]*status:"launch"/g)].map((match) => match[1]);
   assert.deepEqual(launchIds.sort(), expected.map(([id]) => id).sort());

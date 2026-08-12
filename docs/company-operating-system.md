@@ -2,7 +2,7 @@
 
 ## Mission and phase
 
-BayLayer Labs sells made-to-order personalization and small-business products, not undifferentiated 3D prints. The current phase is a measured pilot: validate eight offers, protect cash, and scale only from evidence. Agent roles are invoked for assigned work; they do not run continuously.
+BayLayer Labs sells made-to-order personalization and small-business products, not undifferentiated 3D prints. The current phase is a measured pilot: validate the launch offers, protect cash, and scale only from evidence. Agent roles are invoked for assigned work; they do not run continuously.
 
 ## Decision rights
 
@@ -31,14 +31,40 @@ BayLayer Labs sells made-to-order personalization and small-business products, n
 
 ## Active launch catalog
 
-1. QR/NFC Business Sign — $34.99; bundle $59.99.
-2. Photo Lithophane Night Light — $39.99.
-3. Pet Memorial Stand — $39.99.
-4. Teacher/Office Nameplate — $29.99.
-5. Wedding Place Names — $3.49 each, minimum 20.
-6. Replacement-Part Design Service — from $39 setup.
-7. Modular Hobby Paint Rack — $39.99 plus expansions.
-8. Self-Watering Planter — $31.99 local or $39.99 shipped pair.
+Expanded from the original 8-SKU pilot to at least 4 offers per launch collection. Items marked (fallback) have no generated product photo yet and render the site's honest CSS placeholder instead of a photo — commission real photography of these before treating them as launch-ready for paid acquisition.
+
+**Gifts & Personalization**
+1. Photo Lithophane Night Light — $39.99.
+2. Custom Name Desk Sign — $24.99.
+3. Personalized Name Bag Tag — $7.99.
+4. Pet Memorial Silhouette Stand — $39.99.
+
+**Plants & Decor**
+5. Self-Watering Planter — $31.99 local or $39.99 shipped pair.
+6. Propagation Station with Glass Tubes — $29.99.
+7. Geometric Planter Trio — $32.99.
+8. Hanging Air-Plant Holder — $16.99.
+
+**Gaming & Hobbies**
+9. Modular Hobby Paint Rack — $39.99 plus expansions.
+10. Modular Tabletop Token Trays — $18.99 (fallback).
+11. Trading-Card Display Stands — $14.99 (fallback).
+12. Universal Board-Game Organizer — $29.99 (fallback).
+
+**Seasonal**
+13. Teacher/Office Nameplate — $29.99.
+14. Personalized Holiday Ornament — $14.99 (shares the ornament photo — same physical product as the gift-catalog ornament).
+15. Valentine Coordinates Keepsake — $19.99 (shares the coordinates-keepsake photo).
+16. Family Photo Lithophane — $34.99 (shares the lithophane photo).
+
+**Business & Events**
+17. Wedding Place Names — $3.49 each, minimum 20.
+18. QR/NFC Business Sign — $34.99; bundle $59.99.
+19. Table Number Set — $49.99 (fallback).
+20. Branded Bag Tags — $99 (shares the bag-tag photo).
+
+**Custom 3D Print**
+21. Replacement-Part Design Service — from $39 setup (fallback; no photo yet).
 
 Keep all other catalog items as research inventory or coming-soon experiments. Do not sell licensed characters, generic flexi toys, open-flame products, food-contact items, untested children's products or safety-critical replacement parts.
 

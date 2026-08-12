@@ -78,6 +78,33 @@ const CUSTOMIZATION_SCHEMAS: Record<string, CustomizationField[]> = {
     { key: "dimensions", label: "Measurements", type: "text", required: true, maxLength: 200, hint: "Include units, for example 42 × 18 × 6 mm." },
     { key: "reference", label: "Reference photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "Required. Safety-critical parts are not accepted." },
   ],
+  "PG-03": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 40 },
+    { key: "subtitle", label: "Subtitle", type: "text", maxLength: 60, hint: "Optional" },
+  ],
+  "PG-04": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 20 },
+  ],
+  "SE-01": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 24 },
+    { key: "year", label: "Year", type: "text", maxLength: 4, hint: "Optional; defaults to this year." },
+  ],
+  "SE-06": [
+    { key: "coordinates", label: "Coordinates", type: "text", required: true, maxLength: 60, hint: "For example 37.7749° N, 122.4194° W." },
+    { key: "date", label: "Date", type: "text", maxLength: 30, hint: "Optional" },
+  ],
+  "SE-07": [
+    { key: "photo", label: "Photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "JPG, PNG, or WebP. The file stays on this device until secure upload at checkout." },
+    { key: "orientation", label: "Orientation", type: "select", required: true, options: ["Portrait", "Landscape"] },
+    { key: "caption", label: "Short caption", type: "text", maxLength: 60, hint: "Optional; we will proof it before printing." },
+  ],
+  "BE-02": [
+    { key: "note", label: "Numbering note", type: "text", maxLength: 120, hint: "Optional — e.g. start at table 1 or skip 13." },
+  ],
+  "BE-05": [
+    { key: "text", label: "Tag text", type: "text", required: true, maxLength: 24 },
+    { key: "logo", label: "Approved logo", type: "file", accept: "image/jpeg,image/png,image/webp", hint: "Optional; approved before production." },
+  ],
 };
 
 const EMPTY_CHECKOUT: CheckoutDetails = {
@@ -103,7 +130,17 @@ function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 }
 
-function ProductImage({ product, small = false }: { product: Product; small?: boolean }) {
+const SWATCH_HEX: Record<string, string> = {
+  cream: "#f4ead5",
+  terracotta: "#e8906f",
+  rose: "#e8906f",
+  ocean: "#547d9b",
+  charcoal: "#303637",
+  forest: "#202722",
+};
+
+function ProductImage({ product, small = false, color }: { product: Product; small?: boolean; color?: string }) {
+  const tint = color ? SWATCH_HEX[color.toLowerCase()] : undefined;
   return (
     <div className={`catalog-image tone-${product.id.charCodeAt(0) % 4} ${small ? "small" : ""}`}>
       {/* Product renders live in public/ and intentionally fall back to CSS while assets are generated. */}
@@ -114,6 +151,7 @@ function ProductImage({ product, small = false }: { product: Product; small?: bo
         src={`/products/${product.imageSlug ?? product.slug}.png`}
         onError={(event) => { event.currentTarget.hidden = true; }}
       />
+      {tint && <span className="color-tint" aria-hidden="true" style={{ background: tint }} />}
       <span className="fallback-object" aria-hidden="true"><i /><b /><em /></span>
       <small aria-hidden="true">{product.id}</small>
     </div>
@@ -526,7 +564,7 @@ export function StorefrontExperience() {
         <section className="hero">
           <div className="hero-copy">
             <p className="eyebrow"><span /> PERSONAL, USEFUL, MADE TO ORDER</p>
-            <h1>Eight useful ideas.<br /><em>Made personally.</em></h1>
+            <h1>{LAUNCH_PRODUCTS.length} useful ideas.<br /><em>Made personally.</em></h1>
             <p className="hero-intro">Our focused launch collection brings together personalized gifts, business signs, event pieces, practical parts, and modular tools—printed and human-checked in the Bay Area.</p>
             <div className="hero-actions"><button className="button button-dark" type="button" onClick={() => chooseCollection("Best Sellers")}>Shop the launch collection <span>↗</span></button><button className="button button-quiet" type="button" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}>Create yours <span>→</span></button></div>
             <div className="hero-proof"><div><strong>Made to order</strong><span>Less inventory waste</span></div><div><strong>Personalized</strong><span>Preview before print</span></div><div><strong>Human checked</strong><span>Every single piece</span></div></div>
@@ -540,7 +578,7 @@ export function StorefrontExperience() {
         <section className="trust-strip" aria-label="Service benefits"><span>✦ Upload-safe personalization</span><span>✦ Small-batch quality checked</span><span>✦ Local pickup available</span><span>✦ Clear production times</span></section>
 
         <section className="shop-section" id="catalog">
-          <div className="section-heading"><div><p className="eyebrow"><span /> THE FOCUSED FIRST DROP</p><h2>Eight launch offers.<br /><em>Each with a job.</em></h2></div><p>We narrowed the shelf to {LAUNCH_PRODUCTS.length} high-value products for gifting, business, events, hobbies, plants, and practical repairs. Every order is made only after you choose it.</p></div>
+          <div className="section-heading"><div><p className="eyebrow"><span /> THE FOCUSED FIRST DROP</p><h2>{LAUNCH_PRODUCTS.length} launch offers.<br /><em>Each with a job.</em></h2></div><p>We narrowed the shelf to {LAUNCH_PRODUCTS.length} high-value products for gifting, business, events, hobbies, plants, and practical repairs. Every order is made only after you choose it.</p></div>
 
           <div className="catalog-tabs" role="tablist" aria-label="Product collections">{LAUNCH_COLLECTIONS.map((item) => <button role="tab" aria-selected={collection === item} className={collection === item ? "active" : ""} key={item} type="button" onClick={() => setCollection(item)}>{item}</button>)}</div>
 
@@ -568,7 +606,7 @@ export function StorefrontExperience() {
 
         <section className="recipient-section"><div className="section-heading"><div><p className="eyebrow"><span /> SHOP BY PERSON</p><h2>A useful gift feels<br /><em>more personal.</em></h2></div></div><div className="recipient-grid">{RECIPIENTS.map(([label, target], index) => <button key={label} type="button" className={`recipient-card recipient-${index}`} onClick={() => chooseCollection(target)}><span>For</span><strong>{label}</strong><i>Explore →</i></button>)}</div></section>
 
-        <section className="reviews"><p className="eyebrow light"><span /> PILOT PROMISE</p><blockquote>Useful products, clear limits, and a human review before personalized work reaches the printer.</blockquote><div><strong>BayLayer Labs</strong><span>Eight focused launch offers · Bay Area</span></div><div className="review-points"><span>No fabricated ratings</span><span>File rights confirmed</span><span>Human support</span></div></section>
+        <section className="reviews"><p className="eyebrow light"><span /> PILOT PROMISE</p><blockquote>Useful products, clear limits, and a human review before personalized work reaches the printer.</blockquote><div><strong>BayLayer Labs</strong><span>{LAUNCH_PRODUCTS.length} focused launch offers · Bay Area</span></div><div className="review-points"><span>No fabricated ratings</span><span>File rights confirmed</span><span>Human support</span></div></section>
 
         <section className="custom-section" id="custom-print"><div className="custom-copy"><p className="eyebrow light"><span /> CUSTOM PRINT STUDIO</p><h2>Your file.<br /><em>Made physical.</em></h2><p>Have an STL ready? Get a geometry-based planning estimate, then a human printability review. We do not accept weapons, medical devices, safety-critical parts, or unauthorized designs.</p><ul><li><span>01</span> Upload an STL</li><li><span>02</span> Pick material & finish</li><li><span>03</span> Review before paying</li></ul></div><QuoteBuilder className="quote-builder-shell" heading="Estimate your STL" /></section>
 
@@ -587,12 +625,12 @@ export function StorefrontExperience() {
         <button className="drawer-backdrop" type="button" aria-label="Close product details" onClick={() => setSelected(null)} />
         <section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
           <button ref={detailCloseRef} className="modal-close" type="button" aria-label="Close product details" onClick={() => setSelected(null)}>×</button>
-          <div className="detail-gallery"><ProductImage product={selected} /><div className="thumbs"><ProductImage product={selected} small /><span>Details</span><span>In use</span><span>Scale</span></div></div>
+          <div className="detail-gallery"><ProductImage product={selected} color={detailColor} /><div className="thumbs"><ProductImage product={selected} small /><span>Details</span><span>In use</span><span>Scale</span></div></div>
           <div className="detail-copy">
             <p className="eyebrow"><span /> {selected.collection}</p><h2 id="detail-title">{selected.name}</h2>
             <p className="detail-price">{selected.priceLabel ?? (selected.price === 0 ? "Custom quote" : `From ${money(selected.price)}`)}</p>
             <p>{selected.description}</p><div className="delivery-note"><strong>Made to order</strong><span>Estimated production: {selected.productionDays} business days</span></div>
-            <fieldset><legend>Color · <b>{detailColor}</b></legend><div className="detail-swatches">{selected.colors.map((color) => <button className={detailColor === color ? "active" : ""} aria-label={`Choose ${color}`} title={color} type="button" key={color} onClick={() => setDetailColor(color)}><i className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} /></button>)}</div></fieldset>
+            <fieldset><legend>Color · <b>{detailColor}</b></legend><div className="detail-swatches">{selected.colors.map((color) => <button className={detailColor === color ? "active" : ""} aria-label={`Choose ${color}`} title={color} type="button" key={color} onClick={() => setDetailColor(color)}><i className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} /></button>)}</div><small className="color-disclaimer">Preview tints to your chosen color; the final print may vary slightly by material batch.</small></fieldset>
             {selectedSchema.length > 0 && <div className={styles.customizationGrid}>{selectedSchema.map((field) => <CustomizationControl
               key={field.key}
               field={field}
@@ -617,7 +655,7 @@ export function StorefrontExperience() {
           <div className="cart-header"><div><p>Your bag · {itemCount} items</p><h2 id="cart-title">Ready to make.</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button></div>
           {cart.length === 0 ? <div className="empty-cart"><h3>Your bag is still two-dimensional.</h3><p>Add a useful object and we’ll take it from there.</p><button className="button button-dark" type="button" onClick={() => setCartOpen(false)}>Explore the shop</button></div> : <>
             <div className="cart-items">{cart.map((item) => <div className={`cart-item ${styles.cartLine}`} key={item.id}>
-              <ProductImage product={item.product} small />
+              <ProductImage product={item.product} color={item.color} small />
               <div><p>{item.color}</p><h3>{item.product.name}</h3><ul className={styles.optionList}>{itemOptionSummary(item).map((summary) => <li key={summary}>{summary}</li>)}</ul>
                 <div className="quantity-control"><button type="button" disabled={item.quantity <= (item.product.minimum ?? 1)} aria-label={`Remove one ${item.product.name}`} onClick={() => changeQuantity(item.id,-1)}>−</button><span>{item.quantity}</span><button type="button" disabled={item.quantity >= 100} aria-label={`Add one ${item.product.name}`} onClick={() => changeQuantity(item.id,1)}>+</button></div>
                 <div className={styles.lineActions}><button type="button" onClick={() => editCartLine(item)}>Edit options</button><button type="button" onClick={() => removeCartLine(item.id)}>Remove</button></div>

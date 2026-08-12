@@ -36,6 +36,13 @@
       "when": 1786553872269,
       "tag": "0004_volatile_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786553972269,
+      "tag": "0005_launch_catalog_expansion",
+      "breakpoints": true
     }
   ]
 }

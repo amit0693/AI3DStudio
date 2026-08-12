@@ -116,13 +116,24 @@ const categoryColors: Record<string, { background: string; object: string }> = {
   'Business & Events': { background: '#E2F1E3', object: colors.actionDark },
 };
 
-export function ProductVisual({ product, height = 180 }: { product: Product; height?: number }) {
+const swatchHex: Record<string, string> = {
+  cream: '#f4ead5',
+  terracotta: '#e8906f',
+  rose: '#e8906f',
+  ocean: '#547d9b',
+  charcoal: '#303637',
+  forest: '#202722',
+};
+
+export function ProductVisual({ product, height = 180, color }: { product: Product; height?: number; color?: string }) {
   const palette = categoryColors[product.category] ?? categoryColors['Desk & Tech'];
   const localImage = getProductImage(product.id);
+  const tint = color ? swatchHex[color.toLowerCase()] : undefined;
   if (localImage || product.imageUrl) {
     return (
       <View style={[styles.visual, { height, backgroundColor: palette.background }]}>
         <Image source={localImage ?? { uri: product.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={180} accessibilityLabel={`${product.name} product photo`} />
+        {tint ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: tint, opacity: 0.4 }]} /> : null}
       </View>
     );
   }

@@ -72,6 +72,10 @@ const productImages: Partial<Record<string, number>> = {
   'PD-06': doorwaySilhouette,
   'PD-07': plantTrellis,
   'GH-04': hobbyRack,
+  'SE-01': personalizedOrnament,
+  'SE-06': coordinatesKeepsake,
+  'SE-07': lithophane,
+  'BE-05': personalizedBagTag,
 };
 
 export function getProductImage(productId: string) {
