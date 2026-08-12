@@ -134,7 +134,12 @@ export function StorefrontExperience() {
   }
 
   function changeQuantity(index: number, delta: number) {
-    setCart((items) => items.map((item, i) => i === index ? { ...item, quantity: item.quantity + delta } : item).filter((item) => item.quantity > 0));
+    setCart((items) => items.flatMap((item, i) => {
+      if (i !== index) return [item];
+      const nextQuantity = item.quantity + delta;
+      const minimum = item.product.minimum ?? 1;
+      return nextQuantity < minimum ? [] : [{ ...item, quantity: nextQuantity }];
+    }));
   }
 
   async function joinWaitlist(event: FormEvent<HTMLFormElement>) {
