@@ -233,6 +233,16 @@ export const orderStatusHistory = sqliteTable(
   ],
 );
 
+export const rateLimits = sqliteTable(
+  "rate_limits",
+  {
+    id: text("id").primaryKey(),
+    hitCount: integer("hit_count").notNull().default(0),
+    expiresAtEpoch: integer("expires_at_epoch").notNull(),
+  },
+  (table) => [index("idx_rate_limits_expires").on(table.expiresAtEpoch)],
+);
+
 export const waitlistEntries = sqliteTable(
   "waitlist_entries",
   {

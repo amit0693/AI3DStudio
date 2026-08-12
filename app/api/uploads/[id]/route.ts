@@ -1,11 +1,19 @@
 import { getD1 } from "@/db";
 import {
   ApiError,
+  enforceRateLimit,
   handleApiError,
   json,
   parseJsonColumn,
+  secretsMatch,
   sha256Hex,
 } from "../../products/_shared";
+
+const STATUS_RATE_LIMIT = {
+  bucket: "upload-status",
+  limit: 60,
+  windowSeconds: 600,
+};
 
 type UploadStatusRow = {
   id: string;
@@ -35,6 +43,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await enforceRateLimit(request, STATUS_RATE_LIMIT);
+
     const { id: rawId } = await params;
     const id = decodeURIComponent(rawId);
     if (!/^upl_[a-f0-9-]{36}$/.test(id)) {
@@ -61,7 +71,7 @@ export async function GET(
       )
       .bind(id)
       .first<UploadStatusRow>();
-    if (!row || (await sha256Hex(accessToken)) !== row.access_token_hash) {
+    if (!row || !secretsMatch(await sha256Hex(accessToken), row.access_token_hash)) {
       throw new ApiError(404, "Upload not found.");
     }
 

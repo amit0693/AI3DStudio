@@ -3,15 +3,18 @@ import {
   ApiError,
   cleanEmail,
   cleanText,
+  enforceRateLimit,
   handleApiError,
   integerInRange,
   json,
   randomToken,
+  readBoundedFormData,
   sha256Hex,
 } from "../products/_shared";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_MULTIPART_BYTES = MAX_FILE_BYTES + 256 * 1024;
+const UPLOAD_RATE_LIMIT = { bucket: "uploads", limit: 10, windowSeconds: 600 };
 const ALLOWED_QUALITY = new Set(["draft", "standard", "fine"]);
 const ALLOWED_MATERIAL = new Set(["PLA", "PETG", "TPU"]);
 
@@ -84,16 +87,9 @@ function optionalClientEstimates(form: FormData) {
 export async function POST(request: Request) {
   let uploadedObjectKey: string | null = null;
   try {
-    const contentType = request.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
-      throw new ApiError(415, "Use multipart/form-data with a file field.");
-    }
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) {
-      throw new ApiError(413, "The upload exceeds the 25 MB limit.");
-    }
+    await enforceRateLimit(request, UPLOAD_RATE_LIMIT);
 
-    const form = await request.formData();
+    const form = await readBoundedFormData(request, MAX_MULTIPART_BYTES);
     const candidate = form.get("file");
     if (!(candidate instanceof File)) {
       throw new ApiError(400, "A model file is required in the file field.");

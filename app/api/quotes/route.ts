@@ -1,3 +1,9 @@
+import {
+  ApiError,
+  enforceRateLimit,
+  handleApiError,
+  readBoundedFormData,
+} from "../products/_shared";
 import { calculateQuote } from "@/lib/quote/calculator";
 import { inspectStl } from "@/lib/quote/stl";
 import {
@@ -7,6 +13,10 @@ import {
 import type { QuoteErrorResponse } from "@/lib/quote/types";
 
 export const runtime = "nodejs";
+
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_MULTIPART_BYTES = MAX_FILE_BYTES + 256 * 1024;
+const QUOTE_RATE_LIMIT = { bucket: "quotes", limit: 20, windowSeconds: 600 };
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, {
@@ -35,11 +45,18 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const form = await request.formData();
+    await enforceRateLimit(request, QUOTE_RATE_LIMIT);
+
+    const form = await readBoundedFormData(request, MAX_MULTIPART_BYTES);
     const uploadedFile = form.get("file");
     if (!isUploadedFile(uploadedFile)) {
       throw new QuoteValidationError("An STL file is required.", {
         file: "Choose an STL file to quote.",
+      });
+    }
+    if (uploadedFile.size > MAX_FILE_BYTES) {
+      throw new QuoteValidationError("The STL file is larger than 25 MB.", {
+        file: "Reduce the mesh size below 25 MB and try again.",
       });
     }
 
@@ -64,6 +81,9 @@ export async function POST(request: Request): Promise<Response> {
         fieldErrors: error.fieldErrors,
       };
       return json(body, 400);
+    }
+    if (error instanceof ApiError) {
+      return handleApiError(error);
     }
 
     console.error("Quote calculation failed", error);

@@ -3,6 +3,7 @@ import {
   ApiError,
   cleanEmail,
   cleanText,
+  enforceRateLimit,
   handleApiError,
   integerInRange,
   json,
@@ -41,6 +42,7 @@ type RequestedItem = {
 };
 
 const MAX_ORDER_ITEMS = 20;
+const ORDER_RATE_LIMIT = { bucket: "orders", limit: 10, windowSeconds: 600 };
 const FLAT_SHIPPING_CENTS = 699;
 
 function cleanPersonalization(value: unknown) {
@@ -144,6 +146,8 @@ function orderResponse(row: ExistingOrderRow) {
 
 export async function POST(request: Request) {
   try {
+    await enforceRateLimit(request, ORDER_RATE_LIMIT);
+
     const body = await readJsonObject(request);
     const idempotencyKey = cleanText(
       request.headers.get("idempotency-key") ?? body.idempotencyKey,

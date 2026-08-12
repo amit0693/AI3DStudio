@@ -3,6 +3,7 @@ import {
   ApiError,
   cleanEmail,
   cleanText,
+  enforceRateLimit,
   handleApiError,
   json,
   readJsonObject,
@@ -10,9 +11,16 @@ import {
 
 const ALLOWED_FEATURES = new Set(["ai-scan", "mobile-app", "custom-printing"]);
 const ALLOWED_PHONE_TYPES = new Set(["iphone", "android", "other"]);
+const WAITLIST_RATE_LIMIT = {
+  bucket: "waitlist",
+  limit: 5,
+  windowSeconds: 600,
+};
 
 export async function POST(request: Request) {
   try {
+    await enforceRateLimit(request, WAITLIST_RATE_LIMIT);
+
     const body = await readJsonObject(request, 16 * 1024);
     const email = cleanEmail(body.email)!;
     const name = cleanText(body.name, "name", 100);
