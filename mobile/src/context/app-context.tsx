@@ -66,7 +66,11 @@ export function AppProvider({ children }: PropsWithChildren) {
     }
   }, [apiBaseUrl]);
 
-  useEffect(() => { if (hydrated) void refreshCatalog(); }, [hydrated, refreshCatalog]);
+  useEffect(() => {
+    if (!hydrated) return;
+    const task = setTimeout(() => void refreshCatalog(), 0);
+    return () => clearTimeout(task);
+  }, [hydrated, refreshCatalog]);
 
   const setApiBaseUrl = useCallback(async (value: string) => {
     const normalized = normalizeBaseUrl(value) || DEFAULT_API_BASE_URL;

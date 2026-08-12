@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       title: "BayLayer Labs | Ideas, made local.",
       description:
         "Useful, personalized 3D prints and custom prototypes made in the Bay Area.",
-      images: [{ url: "/og.png", width: 1672, height: 941 }],
+      images: [{ url: "/og.png", width: 1731, height: 909 }],
     },
     twitter: {
       card: "summary_large_image",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#14251c",
+  themeColor: "#123c35",
   colorScheme: "light",
 };
 

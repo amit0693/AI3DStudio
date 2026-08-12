@@ -1,23 +1,41 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "BayLayer Labs",
+    "slug": "baylayer-labs-mobile",
+    "description": "Browse locally made 3D prints and request server-verified STL estimates from BayLayer Labs.",
     "version": "1.0.0",
+    "backgroundColor": "#F6F1E7",
+    "primaryColor": "#123C35",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "baylayer",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.baylayerlabs.mobile",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.baylayerlabs.mobile",
+      "versionCode": 1,
+      "backgroundColor": "#F6F1E7",
+      "userInterfaceStyle": "light",
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#123C35",
+        "foregroundImage": "./assets/images/android-icon-foreground-v2.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome-v2.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "output": "static",
@@ -28,9 +46,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#123C35",
+          "image": "./assets/images/icon.png",
+          "imageWidth": 128
         }
       ]
     ],
