@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, Eyebrow, Pill, Screen, Title } from '@/components/ui';
-import { colors, spacing } from '@/constants/theme';
+import { colors } from '@/constants/theme';
 import { useApp } from '@/context/app-context';
 import { formatMoney } from '@/lib/api';
 

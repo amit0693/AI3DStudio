@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import type { Product, QuoteEstimate } from './types';
 
 export const DEFAULT_API_BASE_URL = 'https://baylayer-labs.amitcodecraft.chatgpt.site';
@@ -34,15 +36,17 @@ export async function requestQuote(
 }
 
 export async function joinWaitlist(apiBaseUrl: string, email: string) {
+  const phoneType = Platform.OS === 'ios' ? 'iphone' : Platform.OS === 'android' ? 'android' : 'other';
+  const source = Platform.OS === 'ios' ? 'ios-app' : Platform.OS === 'android' ? 'android-app' : 'web-app';
   const response = await fetch(`${normalizeBaseUrl(apiBaseUrl)}/api/waitlist`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email,
       feature: 'ai-scan',
-      phoneType: 'iphone',
+      phoneType,
       marketingConsent: true,
-      source: 'ios-app',
+      source,
     }),
   });
   return readResponse<{ joined: true; message: string }>(response);

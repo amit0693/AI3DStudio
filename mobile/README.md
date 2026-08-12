@@ -1,56 +1,43 @@
-# Welcome to your Expo app 👋
+# BayLayer Labs mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Phase 1 Expo/React Native customer app for iOS and Android. The app browses the BayLayer catalog, keeps a cart on-device, submits STL files for server-side estimates, and collects explicit-consent AI Scan early-access registrations.
 
-## Get started
+Payments, production ordering, and camera scanning are intentionally disabled in this preview.
 
-1. Install dependencies
+## Requirements
 
-   ```bash
-   npm install
-   ```
+- Node.js 22.13 or newer
+- Xcode 26.4 or newer for SDK 57 iOS native builds
+- Android Studio with an SDK 57-compatible Android SDK/JDK for native Android builds
+- Expo SDK 57 / React Native 0.86
 
-2. Start the app
+## Run
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+npm install
+npm run ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Use Settings inside the app to select the API base URL. `http://localhost:3000` works from the iOS Simulator when the web API runs on the same Mac. A physical iPhone needs the Mac's LAN address or a reachable HTTPS deployment.
 
-### Other setup steps
+For Android, run `npm run android`. The Android Emulator reaches a server on the same Mac at `http://10.0.2.2:3000`; `localhost` means the emulator itself. A physical Android device needs the Mac's LAN address while both are on the same network, or a reachable HTTPS deployment. Local cleartext HTTP is for development only—use HTTPS for production.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Validate
 
-## Learn more
+```sh
+npm run check
+npx expo export --platform ios --output-dir dist-ios
+npx expo export --platform android --output-dir dist-android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Privacy and security boundaries
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- API configuration is stored locally with AsyncStorage; never enter a secret or access token.
+- The app does not request camera access in Phase 1.
+- The STL is copied into the app cache by the system document picker, then sent only when the customer asks for an estimate.
+- Cart contents are stored on the device. No payment details are collected.
+- Waitlist submission requires an explicit marketing-consent toggle.
 
-## Join the community
+## Publication
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+No App Store or Play Store release has been created. Before store submission, configure the team's Expo/EAS project, signing credentials, privacy declarations, screenshots, support URL, and production API access. Live checkout also requires a verified payment flow and backend webhook handling.
