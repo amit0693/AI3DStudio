@@ -20,6 +20,8 @@ export default function RootLayout() {
         <Stack.Screen name="product/[slug]" options={{ title: 'Product details', presentation: 'card' }} />
         <Stack.Screen name="checkout" options={{ title: 'Checkout', presentation: 'card' }} />
         <Stack.Screen name="checkout-return" options={{ title: 'Order status', presentation: 'card' }} />
+        <Stack.Screen name="sign-in" options={{ title: 'Sign in', presentation: 'card' }} />
+        <Stack.Screen name="account" options={{ title: 'Your account', presentation: 'card' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings', presentation: 'card' }} />
       </Stack>
     </AppProvider>

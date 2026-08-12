@@ -2,6 +2,8 @@
 
 Phase 1 of a Bay Area 3D-printing business: a responsive storefront, eight-product launch catalog, protected personalization/model uploads, server-authoritative orders, Stripe-hosted checkout, and an AI camera-scan waitlist.
 
+Business owners: follow the complete local web, mobile, database, payment-test, backup, and release handoff in [`docs/OWNER-LOCAL-SETUP.md`](docs/OWNER-LOCAL-SETUP.md).
+
 ## What works now
 
 - Browse the launch catalog and use the interactive cart.

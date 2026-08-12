@@ -29,6 +29,13 @@
       "when": 1786516406562,
       "tag": "0003_closed_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786553872269,
+      "tag": "0004_volatile_starfox",
+      "breakpoints": true
     }
   ]
 }

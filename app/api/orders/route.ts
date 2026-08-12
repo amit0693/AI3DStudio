@@ -12,6 +12,7 @@ import {
   sha256Hex,
 } from "../products/_shared";
 import { stripeRequest, type StripeCheckoutSession } from "../stripe/_shared";
+import { auth, authAvailability } from "@/lib/auth";
 
 type CatalogRow = {
   id: string;
@@ -263,6 +264,9 @@ function orderResponse(row: ExistingOrderRow) {
 
 export async function POST(request: Request) {
   try {
+    const session = authAvailability.core
+      ? await auth.api.getSession({ headers: request.headers })
+      : null;
     const body = await readJsonObject(request);
     const idempotencyKey = cleanText(
       request.headers.get("idempotency-key") ?? body.idempotencyKey,
@@ -399,11 +403,11 @@ export async function POST(request: Request) {
       db
         .prepare(
           `INSERT INTO orders (
-             id, order_number, public_token, idempotency_key, customer_email,
+             id, order_number, public_token, idempotency_key, user_id, customer_email,
              customer_name, customer_phone, status, payment_status,
              fulfillment_method, shipping_address_json, customer_notes, currency,
              subtotal_cents, shipping_cents, tax_cents, discount_cents, total_cents
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', 'unpaid', ?, ?, ?,
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', 'unpaid', ?, ?, ?,
                      'USD', ?, ?, ?, ?, ?)`,
         )
         .bind(
@@ -411,6 +415,7 @@ export async function POST(request: Request) {
           orderNumber,
           trackingToken,
           idempotencyKey,
+          session?.user.id ?? null,
           customerEmail,
           customerName,
           customerPhone,

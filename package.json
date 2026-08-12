@@ -11,9 +11,16 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "node scripts/local-database.mjs migrate",
+    "db:summary:local": "node scripts/local-database.mjs summary",
+    "db:console:local": "node scripts/local-database.mjs console",
+    "db:backup:local": "node scripts/local-database.mjs backup"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.6.27",
+    "@better-auth/expo": "^1.6.27",
+    "better-auth": "^1.6.27",
     "drizzle-orm": "0.45.2",
     "react": "19.2.6",
     "react-dom": "19.2.6"

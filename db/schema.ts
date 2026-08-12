@@ -123,6 +123,89 @@ export const personalizationUploads = sqliteTable(
   ],
 );
 
+// Better Auth owns these four tables. Keeping them in the commerce schema lets
+// the website and Expo app share one account, session, and verification store.
+export const authUsers = sqliteTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    emailVerified: integer("email_verified", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    image: text("image"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [uniqueIndex("idx_user_email_unique").on(table.email)],
+);
+
+export const authSessions = sqliteTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    token: text("token").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("idx_session_token_unique").on(table.token),
+    index("idx_session_user_id").on(table.userId),
+  ],
+);
+
+export const authAccounts = sqliteTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: integer("access_token_expires_at", {
+      mode: "timestamp",
+    }),
+    refreshTokenExpiresAt: integer("refresh_token_expires_at", {
+      mode: "timestamp",
+    }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    index("idx_account_user_id").on(table.userId),
+    uniqueIndex("idx_account_provider_account_unique").on(
+      table.providerId,
+      table.accountId,
+    ),
+  ],
+);
+
+export const authVerifications = sqliteTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }),
+    updatedAt: integer("updated_at", { mode: "timestamp" }),
+  },
+  (table) => [index("idx_verification_identifier").on(table.identifier)],
+);
+
 export const orders = sqliteTable(
   "orders",
   {
@@ -130,6 +213,9 @@ export const orders = sqliteTable(
     orderNumber: text("order_number").notNull(),
     publicToken: text("public_token").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
+    userId: text("user_id").references(() => authUsers.id, {
+      onDelete: "set null",
+    }),
     customerEmail: text("customer_email").notNull(),
     customerName: text("customer_name").notNull(),
     customerPhone: text("customer_phone"),
@@ -152,6 +238,7 @@ export const orders = sqliteTable(
     uniqueIndex("idx_orders_order_number_unique").on(table.orderNumber),
     uniqueIndex("idx_orders_public_token_unique").on(table.publicToken),
     uniqueIndex("idx_orders_idempotency_key_unique").on(table.idempotencyKey),
+    index("idx_orders_user_created").on(table.userId, table.createdAt),
     index("idx_orders_customer_created").on(
       table.customerEmail,
       table.createdAt,

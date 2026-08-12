@@ -25,7 +25,7 @@ function HeaderActions() {
       <Pressable accessibilityRole="button" accessibilityLabel="Search products" hitSlop={8} onPress={() => router.navigate('/shop')} style={styles.headerButton}>
         <SymbolView name={icons.search} size={22} tintColor={colors.ceramic} />
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Account and settings" hitSlop={8} onPress={() => router.push('/settings')} style={styles.headerButton}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={8} onPress={() => router.push('/account')} style={styles.headerButton}>
         <SymbolView name={icons.account} size={24} tintColor={colors.ceramic} />
       </Pressable>
     </View>

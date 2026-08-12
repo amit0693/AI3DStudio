@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import type { CartItem, CheckoutDetails, OrderDetail, OrderSummary, PersonalizationField, Product, QuoteEstimate, SelectedFile } from './types';
+import { authClient } from './auth-client';
 
 export const DEFAULT_API_BASE_URL = 'https://baylayer-labs.amitcodecraft.chatgpt.site';
 
@@ -96,7 +97,13 @@ export async function createOrder(apiBaseUrl: string, details: CheckoutDetails, 
   }));
   const response = await fetch(`${normalizeBaseUrl(apiBaseUrl)}/api/orders`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+      ...(normalizeBaseUrl(apiBaseUrl) === DEFAULT_API_BASE_URL && authClient.getCookie()
+        ? { Cookie: authClient.getCookie() }
+        : {}),
+    },
     body: JSON.stringify({ ...details, idempotencyKey, items }),
   });
   return readResponse<{ order: OrderSummary; checkout: { available: boolean; paid?: boolean; url?: string | null; message?: string } }>(response);

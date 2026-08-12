@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, StyleSheet, Text } from 'react-native';
 
@@ -5,8 +6,10 @@ import { Body, Button, Card, Eyebrow, Field, Pill, Screen, Title } from '@/compo
 import { colors } from '@/constants/theme';
 import { useApp } from '@/context/app-context';
 import { DEFAULT_API_BASE_URL, normalizeBaseUrl } from '@/lib/api';
+import { authClient } from '@/lib/auth-client';
 
 export default function SettingsScreen() {
+  const session = authClient.useSession();
   const { apiBaseUrl, setApiBaseUrl, catalogSource } = useApp();
   const [draft, setDraft] = useState(apiBaseUrl);
   const [saved, setSaved] = useState(false);
@@ -30,6 +33,11 @@ export default function SettingsScreen() {
     <Screen>
       <Eyebrow>Profile & preferences</Eyebrow>
       <Title>Settings</Title>
+      <Card>
+        <Text style={styles.heading}>Customer account</Text>
+        <Body muted>{session.data ? `Signed in as ${session.data.user.email}.` : 'Sign in to use the same verified account across the app and website.'}</Body>
+        <Button label={session.data ? 'Open account' : 'Sign in or create account'} onPress={() => router.push(session.data ? '/account' : '/sign-in')} />
+      </Card>
       <Card>
         <Text style={styles.heading}>Store connection</Text>
         <Field

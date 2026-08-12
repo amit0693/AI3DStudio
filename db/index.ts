@@ -7,6 +7,12 @@ type CommerceBindings = {
   UPLOADS?: R2Bucket;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+  BETTER_AUTH_SECRET?: string;
+  BETTER_AUTH_URL?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  RESEND_API_KEY?: string;
+  AUTH_EMAIL_FROM?: string;
 };
 
 function bindings(): CommerceBindings {
@@ -42,5 +48,25 @@ export function getStripeConfig() {
   return {
     secretKey: runtime.STRIPE_SECRET_KEY?.trim() || null,
     webhookSecret: runtime.STRIPE_WEBHOOK_SECRET?.trim() || null,
+  };
+}
+
+export function getAuthConfig() {
+  const runtime = bindings();
+  const baseUrl =
+    runtime.BETTER_AUTH_URL?.trim() ||
+    (process.env.NODE_ENV === "production"
+      ? "https://baylayer-labs.amitcodecraft.chatgpt.site"
+      : "http://localhost:3000");
+
+  return {
+    baseUrl,
+    secret: runtime.BETTER_AUTH_SECRET?.trim() || null,
+    googleClientId: runtime.GOOGLE_CLIENT_ID?.trim() || null,
+    googleClientSecret: runtime.GOOGLE_CLIENT_SECRET?.trim() || null,
+    resendApiKey: runtime.RESEND_API_KEY?.trim() || null,
+    emailFrom:
+      runtime.AUTH_EMAIL_FROM?.trim() ||
+      "BayLayer Labs <sign-in@baylayerlabs.com>",
   };
 }

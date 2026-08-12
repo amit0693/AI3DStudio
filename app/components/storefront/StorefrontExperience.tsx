@@ -515,10 +515,11 @@ export function StorefrontExperience() {
         </nav>
         <div className="header-actions">
           <button className="icon-button search-jump" type="button" onClick={() => searchRef.current?.focus()} aria-label="Search products">⌕</button>
+          <a className="account-button" href="/account">Account</a>
           <button className="menu-button" type="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu"><span /><span /></button>
           <button className="cart-button" type="button" onClick={() => setCartOpen(true)} aria-label={`Open cart with ${itemCount} items`}>Bag <span>{itemCount}</span></button>
         </div>
-        {menuOpen && <div className="mobile-menu"><nav aria-label="Mobile navigation">{LAUNCH_COLLECTIONS.map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}<span>→</span></button>)}<a href="#story" onClick={() => setMenuOpen(false)}>About <span>→</span></a><a href="/company" onClick={() => setMenuOpen(false)}>Company tracker <span>→</span></a></nav></div>}
+        {menuOpen && <div className="mobile-menu"><nav aria-label="Mobile navigation"><a href="/account">Your account <span>→</span></a>{LAUNCH_COLLECTIONS.map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}<span>→</span></button>)}<a href="#story" onClick={() => setMenuOpen(false)}>About <span>→</span></a><a href="/company" onClick={() => setMenuOpen(false)}>Company tracker <span>→</span></a></nav></div>}
       </header>
 
       <div id="main-content">
@@ -580,7 +581,7 @@ export function StorefrontExperience() {
         <section className="newsletter" id="ai-scan"><div><p className="eyebrow light"><span /> AI OBJECT SCAN + NEW DROPS</p><h2>What should we<br /><em>make next?</em></h2><p>Join the early list for new product releases and our upcoming guided AI object scan.</p></div>{joined ? <div className="success" role="status"><strong>You’re on the list.</strong><span>Watch your inbox for the next drop.</span></div> : <form onSubmit={joinWaitlist}><label><span>Email address</span><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label><label className="consent"><input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} /> I agree to product emails and the <a href="/privacy">privacy notice</a>.</label><button disabled={pending} className="button" type="submit">{pending ? "Joining…" : "Join the list →"}</button>{waitlistError && <p role="alert">{waitlistError}</p>}</form>}</section>
       </div>
 
-      <footer><div className="footer-main"><div><a className="brand inverse" href="#top"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a><p>Useful, personalized objects made close to home.</p><span>Bay Area, California</span></div><nav aria-label="Footer shop"><strong>Shop</strong>{LAUNCH_COLLECTIONS.slice(0,5).map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}</button>)}</nav><nav aria-label="Footer help"><strong>Help</strong><a href="#how-it-works">How it works</a><a href="/company">Company tracker</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div><div className="footer-bottom"><span>© 2026 BayLayer Labs</span><span>Ideas, made local.</span></div></footer>
+      <footer><div className="footer-main"><div><a className="brand inverse" href="#top"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a><p>Useful, personalized objects made close to home.</p><span>Bay Area, California</span></div><nav aria-label="Footer shop"><strong>Shop</strong>{LAUNCH_COLLECTIONS.slice(0,5).map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}</button>)}</nav><nav aria-label="Footer help"><strong>Help</strong><a href="/account">Your account</a><a href="#how-it-works">How it works</a><a href="/company">Company tracker</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div><div className="footer-bottom"><span>© 2026 BayLayer Labs</span><span>Ideas, made local.</span></div></footer>
 
       {selected && <div className="modal-layer">
         <button className="drawer-backdrop" type="button" aria-label="Close product details" onClick={() => setSelected(null)} />
@@ -649,7 +650,7 @@ export function StorefrontExperience() {
         </aside>
       </div>}
 
-      <nav className="app-tabs" aria-label="Mobile app navigation"><a href="#top"><span>⌂</span>Home</a><button type="button" onClick={() => chooseCollection("Best Sellers")}><span>▦</span>Shop</button><button type="button" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}><span>✦</span>Customize</button><a href="/company"><span>◎</span>Team</a><button type="button" onClick={() => setCartOpen(true)}><span>▱</span>Cart{itemCount > 0 && <i>{itemCount}</i>}</button></nav>
+      <nav className="app-tabs" aria-label="Mobile app navigation"><a href="#top"><span>⌂</span>Home</a><button type="button" onClick={() => chooseCollection("Best Sellers")}><span>▦</span>Shop</button><button type="button" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}><span>✦</span>Customize</button><a href="/account"><span>◎</span>Account</a><button type="button" onClick={() => setCartOpen(true)}><span>▱</span>Cart{itemCount > 0 && <i>{itemCount}</i>}</button></nav>
     </main>
   );
 }
