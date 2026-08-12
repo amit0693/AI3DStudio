@@ -27,17 +27,20 @@ export type Product = {
   badge?: string;
   minimum?: number;
   safety?: string;
+  status?: "launch" | "research";
+  priceLabel?: string;
+  imageSlug?: string;
 };
 
 const colors = ["Forest", "Cream", "Terracotta", "Ocean", "Charcoal"];
 const giftColors = ["Cream", "Forest", "Rose", "Ocean", "Charcoal"];
 
 export const PRODUCTS: Product[] = [
-  { id:"PG-01", slug:"custom-photo-lithophane-night-light", name:"Photo Lithophane Night Light", collection:"Gifts & Personalization", price:29.99, description:"Turn a favorite photo into a softly glowing, made-for-you keepsake.", material:"PLA", colors:giftColors, productionDays:5, personalized:true, featured:true, badge:"Best seller", safety:"Use only with the included low-heat LED light." },
+  { id:"PG-01", slug:"custom-photo-lithophane-night-light", name:"Photo Lithophane Night Light", collection:"Gifts & Personalization", price:39.99, priceLabel:"$39.99", description:"Turn a favorite photo into a softly glowing, made-for-you keepsake.", material:"PLA", colors:giftColors, productionDays:5, personalized:true, featured:true, badge:"Launch favorite", safety:"Use only with the included low-heat LED light.", status:"launch" },
   { id:"PG-02", slug:"four-photo-lithophane-cube-lamp", name:"Four-Photo Lithophane Cube Lamp", collection:"Gifts & Personalization", price:49.99, description:"Four memories in one sculptural light, with a preview before printing.", material:"PLA", colors:giftColors, productionDays:7, personalized:true, badge:"Personalize" },
   { id:"PG-03", slug:"custom-name-desk-sign", name:"Custom Name Desk Sign", collection:"Gifts & Personalization", price:24.99, description:"A layered nameplate sized, colored, and lettered for their space.", material:"PLA", colors:giftColors, productionDays:4, personalized:true, featured:true, badge:"Best seller" },
   { id:"PG-04", slug:"personalized-name-bag-tag", name:"Personalized Name Bag Tag", collection:"Gifts & Personalization", price:7.99, description:"A durable two-color tag for backpacks, luggage, and everyday carry.", material:"PETG", colors:giftColors, productionDays:3, personalized:true, badge:"3 for $17.99" },
-  { id:"PG-05", slug:"pet-memorial-silhouette-stand", name:"Pet Memorial Silhouette Stand", collection:"Gifts & Personalization", price:29.99, description:"A quiet custom silhouette keepsake made from your favorite pet photo.", material:"PLA", colors:giftColors, productionDays:5, personalized:true, featured:true, badge:"Personalize" },
+  { id:"PG-05", slug:"pet-memorial-silhouette-stand", name:"Pet Memorial Silhouette Stand", collection:"Gifts & Personalization", price:39.99, priceLabel:"$39.99", description:"A quiet custom silhouette keepsake made from your favorite pet photo.", material:"PLA", colors:giftColors, productionDays:5, personalized:true, featured:true, badge:"Personalize", status:"launch" },
   { id:"PG-06", slug:"coordinates-date-keepsake", name:"Coordinates & Date Keepsake", collection:"Gifts & Personalization", price:19.99, description:"Mark a meaningful place and date in a minimal tabletop piece.", material:"PLA", colors:giftColors, productionDays:4, personalized:true },
   { id:"PG-07", slug:"custom-qr-display-sign", name:"Custom QR Display Sign", collection:"Gifts & Personalization", price:22.99, description:"A scan-ready stand for a playlist, album, registry, or personal link.", material:"PLA", colors:giftColors, productionDays:4, personalized:true },
   { id:"PG-08", slug:"personalized-ornament", name:"Personalized Ornament", collection:"Gifts & Personalization", price:14.99, description:"A lightweight name-and-year ornament with gift-ready packaging.", material:"PLA", colors:giftColors, productionDays:3, personalized:true },
@@ -64,7 +67,7 @@ export const PRODUCTS: Product[] = [
   { id:"HO-09", slug:"bathroom-organizer", name:"Toothbrush & Bathroom Organizer", collection:"Home & Organization", price:19.99, description:"A ventilated, easy-rinse organizer sized for a busy counter.", material:"PETG", colors, productionDays:4 },
   { id:"HO-10", slug:"stackable-small-parts-bins", name:"Stackable Small-Parts Bins · Set of 4", collection:"Home & Organization", price:24.99, description:"Open-front bins for hardware, craft supplies, and workshop essentials.", material:"PETG", colors, productionDays:5 },
 
-  { id:"PD-01", slug:"self-watering-planter", name:"Self-Watering Planter", collection:"Plants & Decor", price:24.99, description:"A two-piece planter that makes moisture levels easy to check.", material:"PETG", colors, productionDays:5, featured:true, badge:"Plant favorite" },
+  { id:"PD-01", slug:"self-watering-planter", name:"Self-Watering Planter", collection:"Plants & Decor", price:31.99, priceLabel:"$31.99 local · $39.99 pair shipped", description:"A two-piece planter that makes moisture levels easy to check; choose local pickup or a shipping-efficient pair.", material:"PETG", colors, productionDays:5, featured:true, badge:"Local favorite", status:"launch" },
   { id:"PD-02", slug:"propagation-station", name:"Propagation Station with Glass Tubes", collection:"Plants & Decor", price:29.99, description:"A stable three-tube stand for watching new roots take shape.", material:"PETG + glass", colors, productionDays:5 },
   { id:"PD-03", slug:"geometric-planter-trio", name:"Geometric Planter Trio", collection:"Plants & Decor", price:32.99, description:"Three coordinated small planters for succulents and desk plants.", material:"PETG", colors, productionDays:6 },
   { id:"PD-04", slug:"hanging-air-plant-holder", name:"Hanging Air-Plant Holder", collection:"Plants & Decor", price:16.99, description:"A light sculptural cradle designed for small air plants.", material:"PETG", colors, productionDays:3 },
@@ -76,7 +79,7 @@ export const PRODUCTS: Product[] = [
   { id:"GH-01", slug:"modular-tabletop-token-trays", name:"Modular Tabletop Token Trays", collection:"Gaming & Hobbies", price:18.99, description:"Stackable trays keep shared tokens visible and the table moving.", material:"PLA", colors, productionDays:4, featured:true },
   { id:"GH-02", slug:"adjustable-card-deck-box", name:"Adjustable Card Deck Box", collection:"Gaming & Hobbies", price:24.99, description:"An adjustable divider keeps sleeved card collections snug.", material:"PLA", colors, productionDays:5 },
   { id:"GH-03", slug:"dice-tower-folding-tray", name:"Dice Tower & Folding Tray", collection:"Gaming & Hobbies", price:29.99, description:"A satisfying tower that packs into its own quiet rolling tray.", material:"PLA", colors, productionDays:6 },
-  { id:"GH-04", slug:"hobby-paint-bottle-rack", name:"Hobby Paint-Bottle Rack", collection:"Gaming & Hobbies", price:34.99, description:"Tiered storage puts up to 24 common hobby paints in clear view.", material:"PLA", colors, productionDays:6, featured:true, badge:"Maker pick" },
+  { id:"GH-04", slug:"hobby-paint-bottle-rack", name:"Modular Hobby Paint Rack", collection:"Gaming & Hobbies", price:39.99, priceLabel:"$39.99", description:"Tiered storage puts up to 24 common hobby paints in clear view, with matching expansion modules planned.", material:"PLA", colors, productionDays:6, featured:true, badge:"Expandable", status:"launch" },
   { id:"GH-05", slug:"trading-card-display-stands", name:"Trading-Card Display Stands · Set of 3", collection:"Gaming & Hobbies", price:14.99, description:"Low-profile stands that frame favorite cards without covering them.", material:"PLA", colors, productionDays:3 },
   { id:"GH-06", slug:"universal-board-game-organizer", name:"Universal Board-Game Organizer", collection:"Gaming & Hobbies", price:29.99, description:"Configurable trays for cards, cubes, coins, and common components.", material:"PLA", colors, productionDays:6 },
   { id:"GH-07", slug:"miniature-painting-tool-caddy", name:"Miniature Painting Tool Caddy", collection:"Gaming & Hobbies", price:27.99, description:"Organize brushes, tools, water cups, and the miniature in progress.", material:"PLA", colors, productionDays:5 },
@@ -85,15 +88,15 @@ export const PRODUCTS: Product[] = [
   { id:"SE-01", slug:"holiday-ornament", name:"Personalized Holiday Ornament", collection:"Seasonal", price:14.99, description:"A name-and-year keepsake with a choice of modern motifs.", material:"PLA", colors:giftColors, productionDays:3, personalized:true },
   { id:"SE-02", slug:"led-tealight-lantern", name:"LED Tealight Decorative Lantern", collection:"Seasonal", price:24.99, description:"A patterned lantern made only for flameless LED tealights.", material:"PETG", colors, productionDays:5, safety:"Flameless LED lights only. Never use an open flame." },
   { id:"SE-03", slug:"graduation-name-year-sign", name:"Graduation Name & Year Sign", collection:"Seasonal", price:22.99, description:"A personalized celebration sign for a party table or photo setup.", material:"PLA", colors:giftColors, productionDays:4, personalized:true },
-  { id:"SE-04", slug:"teacher-name-desk-sign", name:"Teacher Name Desk Sign", collection:"Seasonal", price:22.99, description:"A classroom-ready personalized sign with a sturdy base.", material:"PLA", colors:giftColors, productionDays:4, personalized:true },
+  { id:"SE-04", slug:"teacher-name-desk-sign", name:"Teacher & Office Nameplate", collection:"Seasonal", price:29.99, priceLabel:"$29.99", description:"A classroom- or office-ready personalized nameplate with a sturdy base.", material:"PLA", colors:giftColors, productionDays:4, personalized:true, featured:true, badge:"Personalize", status:"launch", imageSlug:"custom-name-desk-sign" },
   { id:"SE-05", slug:"halloween-led-window-silhouette", name:"Halloween LED Window Silhouette", collection:"Seasonal", price:19.99, description:"A dramatic window accent designed for low-heat LEDs.", material:"PETG", colors, productionDays:4, safety:"Use only with low-heat LED lighting." },
   { id:"SE-06", slug:"valentine-coordinates-keepsake", name:"Valentine Coordinates Keepsake", collection:"Seasonal", price:19.99, description:"A minimal reminder of where your story began.", material:"PLA", colors:giftColors, productionDays:4, personalized:true },
   { id:"SE-07", slug:"family-photo-lithophane", name:"Family Photo Lithophane", collection:"Seasonal", price:34.99, description:"A framed glowing photo gift for Mother’s Day, Father’s Day, or anytime.", material:"PLA", colors:giftColors, productionDays:6, personalized:true },
   { id:"SE-08", slug:"stocking-name-tag", name:"Custom Stocking Name Tag", collection:"Seasonal", price:9.99, description:"A two-color name tag that makes every stocking easy to spot.", material:"PLA", colors:giftColors, productionDays:3, personalized:true },
 
-  { id:"BE-01", slug:"wedding-place-name", name:"Wedding Place Name", collection:"Business & Events", price:3.99, description:"Freestanding guest names that double as personal favors.", material:"PLA", colors:giftColors, productionDays:7, personalized:true, featured:true, badge:"Min. 10", minimum:10 },
+  { id:"BE-01", slug:"wedding-place-name", name:"Wedding Place Name", collection:"Business & Events", price:3.49, priceLabel:"$3.49 each · minimum 20", description:"Freestanding guest names that double as personal favors, packed in seating-list order.", material:"PLA", colors:giftColors, productionDays:7, personalized:true, featured:true, badge:"Min. 20", minimum:20, status:"launch", imageSlug:"personalized-name-desk-sign" },
   { id:"BE-02", slug:"table-number-set", name:"Table Number Set · 1–10", collection:"Business & Events", price:49.99, description:"A coordinated set of modern, highly legible table numbers.", material:"PLA", colors:giftColors, productionDays:7, personalized:true },
-  { id:"BE-03", slug:"qr-review-payment-sign", name:"QR Review or Payment Sign", collection:"Business & Events", price:24.99, description:"A branded counter sign configured and test-scanned before delivery.", material:"PLA", colors, productionDays:5, personalized:true },
+  { id:"BE-03", slug:"qr-review-payment-sign", name:"QR / NFC Business Sign", collection:"Business & Events", price:34.99, priceLabel:"$34.99 · two-sign bundle $59.99", description:"A branded counter sign configured, link-checked, and test-scanned before delivery; add NFC or choose the two-sign bundle.", material:"PLA + optional NFC", colors, productionDays:5, personalized:true, featured:true, badge:"Business pick", status:"launch", imageSlug:"custom-qr-display-sign" },
   { id:"BE-04", slug:"logo-counter-sign", name:"Logo Counter Sign", collection:"Business & Events", price:39.99, description:"A dimensional logo sign tailored to your counter and brand colors.", material:"PLA", colors, productionDays:7, personalized:true, badge:"From $39.99" },
   { id:"BE-05", slug:"branded-bag-tags", name:"Branded Bag Tags · Set of 25", collection:"Business & Events", price:99, description:"Durable branded tags for teams, events, or customer gifts.", material:"PETG", colors, productionDays:10, personalized:true },
   { id:"BE-06", slug:"custom-product-display-stand", name:"Custom Product Display Stand", collection:"Business & Events", price:35, description:"A made-to-measure stand that presents a product at its best angle.", material:"PETG", colors, productionDays:8, personalized:true, badge:"From $35" },
@@ -101,9 +104,23 @@ export const PRODUCTS: Product[] = [
   { id:"BE-08", slug:"retail-price-card-holders", name:"Retail Price-Card Holders", collection:"Business & Events", price:24.99, description:"A clean reusable set for markets, counters, and pop-ups.", material:"PETG", colors, productionDays:5 },
 
   { id:"CP-01", slug:"print-uploaded-3d-file", name:"Print an Uploaded STL / 3MF", collection:"Custom 3D Print", price:25, description:"Upload a ready model for a material, size, and printability review.", material:"PLA / PETG", colors, productionDays:5, personalized:true, badge:"From $25" },
-  { id:"CP-02", slug:"replacement-part-reproduction", name:"Replacement-Part Reproduction", collection:"Custom 3D Print", price:35, description:"Send photos and measurements for a practical, non-safety-critical replacement.", material:"PETG", colors, productionDays:8, personalized:true, badge:"From $35" },
+  { id:"CP-02", slug:"replacement-part-reproduction", name:"Replacement-Part Design Service", collection:"Custom 3D Print", price:39, priceLabel:"$39 setup + print", description:"Send photos and measurements for design help on a practical, non-safety-critical replacement; print cost follows approval.", material:"PETG", colors, productionDays:8, personalized:true, featured:true, badge:"From $39 setup", status:"launch" },
   { id:"CP-03", slug:"prototype-printing", name:"Prototype Printing", collection:"Custom 3D Print", price:45, description:"A human-reviewed functional prototype with tolerance and material guidance.", material:"PLA / PETG", colors, productionDays:7, personalized:true, badge:"From $45" },
   { id:"CP-04", slug:"bulk-print-production", name:"Bulk Print Production", collection:"Custom 3D Print", price:0, description:"Small-batch production planning, print checks, packing, and a clear quote.", material:"By project", colors, productionDays:10, personalized:true, badge:"Request quote" },
 ];
 
 export const BEST_SELLERS = PRODUCTS.filter((product) => product.featured);
+
+// The broad catalog remains available for product research and validation.
+// Only these proven offers are presented to customers during the launch phase.
+export const LAUNCH_PRODUCTS = PRODUCTS.filter((product) => product.status === "launch");
+
+export const LAUNCH_COLLECTIONS: Collection[] = [
+  "Best Sellers",
+  "Gifts & Personalization",
+  "Plants & Decor",
+  "Gaming & Hobbies",
+  "Seasonal",
+  "Business & Events",
+  "Custom 3D Print",
+];
