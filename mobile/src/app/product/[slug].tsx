@@ -94,7 +94,7 @@ export default function ProductDetailScreen() {
                   {uploadUri ? <Image source={{ uri: uploadUri }} style={styles.uploadPreview} contentFit="cover" accessibilityLabel="Selected personalization image preview" /> : null}
                   {uploadName ? <Pill>{uploadName}</Pill> : <Body muted>JPG, PNG, HEIC, or another image format · up to 15 MB</Body>}
                   <View style={styles.rightsRow}>
-                    <Switch accessibilityLabel="Confirm image rights" value={rightsConfirmed} onValueChange={setRightsConfirmed} trackColor={{ false: colors.line, true: colors.forest }} />
+                    <Switch accessibilityLabel="Confirm image rights" value={rightsConfirmed} onValueChange={setRightsConfirmed} trackColor={{ false: colors.line, true: colors.action }} />
                     <Text style={styles.rightsText}>I own this image or have permission to use it for this product.</Text>
                   </View>
                 </>
@@ -161,7 +161,7 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.cream }, flex: { flex: 1 },
+  safe: { flex: 1, backgroundColor: colors.ceramic }, flex: { flex: 1 },
   missing: { padding: spacing.lg, gap: spacing.md },
   content: { padding: spacing.md, gap: spacing.md },
   visualWrap: { borderRadius: radius.lg, overflow: 'hidden', ...shadow },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   choiceSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
   choiceText: { color: colors.text, fontWeight: '800' }, choiceTextSelected: { color: colors.white },
   optionLabel: { color: colors.ink, fontSize: 16, fontWeight: '900' },
-  customCard: { backgroundColor: colors.mintPale, borderColor: colors.forest, gap: spacing.md },
+  customCard: { backgroundColor: colors.icePale, borderColor: colors.action, gap: spacing.md },
   rightsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }, rightsText: { color: colors.text, flex: 1, lineHeight: 20 },
   uploadPreview: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.sm, backgroundColor: colors.paper },
   notesInput: { minHeight: 92, paddingTop: 13, textAlignVertical: 'top' },

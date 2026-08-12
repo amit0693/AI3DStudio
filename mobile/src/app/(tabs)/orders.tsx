@@ -42,11 +42,11 @@ function Timeline({ number, title, text, last = false }: { number: string; title
 const styles = StyleSheet.create({
   timeline: { flexDirection: 'row', gap: spacing.md },
   markerWrap: { alignItems: 'center', width: 36 },
-  marker: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
+  marker: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.ice, alignItems: 'center', justifyContent: 'center' },
   markerText: { color: colors.ink, fontWeight: '900' },
   line: { width: 2, flex: 1, minHeight: 40, backgroundColor: colors.line },
   timelineCopy: { flex: 1, paddingBottom: spacing.md, gap: 3 },
   timelineTitle: { color: colors.ink, fontWeight: '900', fontSize: 16 },
-  help: { backgroundColor: colors.mintPale },
+  help: { backgroundColor: colors.icePale },
   helpTitle: { color: colors.ink, fontSize: 20, fontWeight: '900' },
 });

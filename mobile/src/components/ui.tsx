@@ -107,13 +107,13 @@ export function EmptyState({ title, message, action }: { title: string; message:
 }
 
 const categoryColors: Record<string, { background: string; object: string }> = {
-  'Gifts & Personalization': { background: '#FFE7DD', object: colors.orange },
-  'Desk & Tech': { background: '#ECE7FA', object: colors.forest },
-  'Home & Organization': { background: '#EEEAF2', object: '#565577' },
-  'Plants & Decor': { background: '#F3E4F5', object: '#9167A6' },
-  'Gaming & Hobbies': { background: '#E7E4F7', object: '#655F91' },
-  Seasonal: { background: '#F7E8C2', object: '#C27C33' },
-  'Business & Events': { background: '#DCE9EE', object: '#40718A' },
+  'Gifts & Personalization': { background: colors.clayPale, object: colors.clay },
+  'Desk & Tech': { background: colors.ice, object: colors.action },
+  'Home & Organization': { background: '#EAF0F8', object: '#3E5B7D' },
+  'Plants & Decor': { background: '#EDF4FF', object: '#5D82B5' },
+  'Gaming & Hobbies': { background: '#E7EEFF', object: '#315FAF' },
+  Seasonal: { background: '#FFF4D8', object: '#B45E3F' },
+  'Business & Events': { background: '#E1F1FF', object: colors.actionDark },
 };
 
 export function ProductVisual({ product, height = 180 }: { product: Product; height?: number }) {
@@ -138,27 +138,27 @@ export function ProductVisual({ product, height = 180 }: { product: Product; hei
 }
 
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
-  return <View style={styles.loading}><ActivityIndicator color={colors.orange} /><Text style={styles.hint}>{label}</Text></View>;
+  return <View style={styles.loading}><ActivityIndicator color={colors.action} /><Text style={styles.hint}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.cream },
+  safe: { flex: 1, backgroundColor: colors.ceramic },
   scroll: { flex: 1 },
   content: { padding: spacing.md, paddingBottom: 56, gap: spacing.md },
-  eyebrow: { color: colors.orangeDark, fontFamily: typography.label, fontSize: 11, fontWeight: '700', letterSpacing: 1.35, textTransform: 'uppercase' },
-  eyebrowLight: { color: colors.mint },
+  eyebrow: { color: colors.actionDark, fontFamily: typography.label, fontSize: 11, fontWeight: '700', letterSpacing: 1.35, textTransform: 'uppercase' },
+  eyebrowLight: { color: colors.ice },
   title: { color: colors.ink, fontFamily: typography.display, fontSize: 42, lineHeight: 44, fontWeight: '700', letterSpacing: -1.1 },
   titleLight: { color: colors.white },
   sectionTitleRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { color: colors.ink, fontFamily: typography.display, fontSize: 27, lineHeight: 31, fontWeight: '700', letterSpacing: -0.35 },
   body: { color: colors.text, fontFamily: typography.body, fontSize: 16, lineHeight: 24 },
   muted: { color: colors.muted },
-  bodyLight: { color: '#F0EAFF' },
+  bodyLight: { color: '#E6EEF9' },
   card: { backgroundColor: colors.paper, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: spacing.md, gap: spacing.sm },
-  button: { minHeight: 50, paddingHorizontal: spacing.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.orange },
+  button: { minHeight: 50, paddingHorizontal: spacing.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.action },
   buttonCompact: { minHeight: 44, paddingHorizontal: 14 },
-  button_primary: { backgroundColor: colors.orange, borderColor: colors.orange },
-  button_secondary: { backgroundColor: colors.mintPale, borderColor: colors.forest },
+  button_primary: { backgroundColor: colors.action, borderColor: colors.action },
+  button_secondary: { backgroundColor: colors.icePale, borderColor: colors.action },
   button_ghost: { backgroundColor: 'transparent', borderColor: colors.line },
   button_dark: { backgroundColor: colors.ink, borderColor: colors.ink },
   buttonDisabled: { opacity: 0.45 },
@@ -167,18 +167,18 @@ const styles = StyleSheet.create({
   buttonLabelDark: { color: colors.ink },
   fieldWrap: { gap: 7 },
   label: { color: colors.ink, fontFamily: typography.body, fontSize: 14, fontWeight: '800' },
-  input: { minHeight: 50, borderWidth: 1, borderColor: '#D7CFE5', borderRadius: radius.sm, paddingHorizontal: 14, color: colors.text, fontFamily: typography.body, fontSize: 16, backgroundColor: colors.white },
+  input: { minHeight: 50, borderWidth: 1, borderColor: colors.line, borderRadius: radius.sm, paddingHorizontal: 14, color: colors.text, fontFamily: typography.body, fontSize: 16, backgroundColor: colors.white },
   hint: { color: colors.muted, fontFamily: typography.body, fontSize: 12, lineHeight: 17 },
   pill: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  pill_mint: { backgroundColor: colors.mint },
-  pill_orange: { backgroundColor: colors.peach },
-  pill_neutral: { backgroundColor: '#ECE8F1' },
+  pill_mint: { backgroundColor: colors.ice },
+  pill_orange: { backgroundColor: colors.clayPale },
+  pill_neutral: { backgroundColor: '#E9EEF5' },
   pill_dark: { backgroundColor: colors.ink },
   pillText: { color: colors.ink, fontFamily: typography.label, fontWeight: '700', fontSize: 10 },
   pillTextLight: { color: colors.white },
   empty: { alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, ...shadow },
-  emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.mintPale, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
-  emptyDot: { width: 32, height: 32, borderRadius: 8, backgroundColor: colors.mint, transform: [{ rotate: '12deg' }] },
+  emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.icePale, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  emptyDot: { width: 32, height: 32, borderRadius: 8, backgroundColor: colors.ice, transform: [{ rotate: '12deg' }] },
   emptyTitle: { color: colors.ink, fontFamily: typography.display, fontSize: 26, fontWeight: '700', textAlign: 'center' },
   emptyMessage: { textAlign: 'center' },
   visual: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },

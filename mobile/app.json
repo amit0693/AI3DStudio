@@ -4,8 +4,8 @@
     "slug": "baylayer-labs-mobile",
     "description": "Shop personalized gifts and practical 3D prints, or request a server-verified STL estimate from BayLayer Labs.",
     "version": "1.1.0",
-    "backgroundColor": "#F7F2EA",
-    "primaryColor": "#17182F",
+    "backgroundColor": "#F5F8FF",
+    "primaryColor": "#0C1B33",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "baylayer",
@@ -22,7 +22,7 @@
     "android": {
       "package": "com.baylayerlabs.mobile",
       "versionCode": 1,
-      "backgroundColor": "#F7F2EA",
+      "backgroundColor": "#F5F8FF",
       "userInterfaceStyle": "light",
       "allowBackup": false,
       "blockedPermissions": [
@@ -31,7 +31,7 @@
       ],
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#17182F",
+        "backgroundColor": "#0C1B33",
         "foregroundImage": "./assets/images/icon.png",
         "monochromeImage": "./assets/images/android-icon-monochrome-v2.png"
       },
@@ -46,7 +46,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#17182F",
+          "backgroundColor": "#0C1B33",
           "image": "./assets/images/icon.png",
           "imageWidth": 128
         }

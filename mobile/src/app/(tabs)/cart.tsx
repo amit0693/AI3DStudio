@@ -77,8 +77,8 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  shipping: { backgroundColor: colors.mintPale }, shippingTitle: { color: colors.ink, fontWeight: '900', fontSize: 16 },
-  progressTrack: { height: 9, borderRadius: 5, overflow: 'hidden', backgroundColor: colors.line }, progressFill: { height: 9, borderRadius: 5, backgroundColor: colors.orange },
+  shipping: { backgroundColor: colors.icePale }, shippingTitle: { color: colors.ink, fontWeight: '900', fontSize: 16 },
+  progressTrack: { height: 9, borderRadius: 5, overflow: 'hidden', backgroundColor: colors.line }, progressFill: { height: 9, borderRadius: 5, backgroundColor: colors.action },
   item: { gap: spacing.md }, itemRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   thumb: { width: 108, borderRadius: radius.sm, overflow: 'hidden' }, itemCopy: { flex: 1, gap: 3 },
   name: { color: colors.ink, fontSize: 17, lineHeight: 21, fontWeight: '900' }, price: { color: colors.muted, fontSize: 13 }, option: { color: colors.text, fontSize: 12, lineHeight: 16 },

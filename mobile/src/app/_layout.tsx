@@ -11,9 +11,9 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.ink },
-          headerTintColor: colors.cream,
+          headerTintColor: colors.ceramic,
           headerTitleStyle: { fontFamily: typography.display, fontSize: 21, fontWeight: '700' },
-          contentStyle: { backgroundColor: colors.cream },
+          contentStyle: { backgroundColor: colors.ceramic },
           headerBackButtonDisplayMode: 'minimal',
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -43,7 +43,7 @@ export default function ShopScreen() {
   }
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={catalogLoading} onRefresh={() => void refreshCatalog()} tintColor={colors.orange} />}>
+    <Screen refreshControl={<RefreshControl refreshing={catalogLoading} onRefresh={() => void refreshCatalog()} tintColor={colors.action} />}>
       <Eyebrow>Small-batch catalog</Eyebrow>
       <Title>Find your next useful object.</Title>
       <View style={styles.searchWrap}>
@@ -105,6 +105,6 @@ const styles = StyleSheet.create({
   resultCount: { color: colors.muted, fontSize: 13, fontWeight: '800' },
   filters: { gap: spacing.md },
   filterRow: { gap: 7 }, filterLabel: { color: colors.ink, fontWeight: '900' }, filterChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  offline: { borderLeftColor: colors.yellow, borderLeftWidth: 4 },
+  offline: { borderLeftColor: colors.sand, borderLeftWidth: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', rowGap: spacing.md },
 });

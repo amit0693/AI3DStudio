@@ -23,10 +23,10 @@ function HeaderActions() {
   return (
     <View style={styles.headerActions}>
       <Pressable accessibilityRole="button" accessibilityLabel="Search products" hitSlop={8} onPress={() => router.navigate('/shop')} style={styles.headerButton}>
-        <SymbolView name={icons.search} size={22} tintColor={colors.cream} />
+        <SymbolView name={icons.search} size={22} tintColor={colors.ceramic} />
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Account and settings" hitSlop={8} onPress={() => router.push('/settings')} style={styles.headerButton}>
-        <SymbolView name={icons.account} size={24} tintColor={colors.cream} />
+        <SymbolView name={icons.account} size={24} tintColor={colors.ceramic} />
       </Pressable>
     </View>
   );
@@ -38,15 +38,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.ink },
-        headerTintColor: colors.cream,
+        headerTintColor: colors.ceramic,
         headerTitleStyle: { fontWeight: '900' },
         headerRight: HeaderActions,
-        tabBarActiveTintColor: colors.orange,
+        tabBarActiveTintColor: colors.action,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.paper, borderTopColor: colors.line, minHeight: 68, paddingTop: 5 },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '800', paddingBottom: 3 },
         tabBarHideOnKeyboard: true,
-        sceneStyle: { backgroundColor: colors.cream },
+        sceneStyle: { backgroundColor: colors.ceramic },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color }) => <TabIcon name="home" color={color} /> }} />
       <Tabs.Screen name="shop" options={{ title: 'Shop', tabBarIcon: ({ color }) => <TabIcon name="shop" color={color} /> }} />
@@ -60,5 +60,5 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', marginRight: 8, gap: 2 },
   headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  badge: { backgroundColor: colors.orange, color: colors.white, fontWeight: '900' },
+  badge: { backgroundColor: colors.action, color: colors.white, fontWeight: '900' },
 });

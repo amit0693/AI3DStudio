@@ -4,8 +4,8 @@
   "description": "Shop and quote locally made 3D prints in the Bay Area.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f2ea",
-  "theme_color": "#17182f",
+  "background_color": "#f5f8ff",
+  "theme_color": "#0c1b33",
   "categories": ["shopping", "business", "utilities"],
   "icons": [
     {

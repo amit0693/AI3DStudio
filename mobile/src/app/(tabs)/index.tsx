@@ -23,7 +23,7 @@ export default function HomeScreen() {
   const featured = products.filter((product) => product.featured).slice(0, 6);
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={catalogLoading} onRefresh={() => void refreshCatalog()} tintColor={colors.orange} />}>
+    <Screen refreshControl={<RefreshControl refreshing={catalogLoading} onRefresh={() => void refreshCatalog()} tintColor={colors.action} />}>
       <View style={styles.hero}>
         <View style={styles.heroCopy}>
           <Eyebrow light>Printed to order in the USA</Eyebrow>
@@ -117,29 +117,29 @@ const styles = StyleSheet.create({
   heroProduct: { maxWidth: 230, color: colors.white, fontSize: 17, fontWeight: '900', textShadowColor: '#00000099', textShadowRadius: 8 },
   benefits: { flexDirection: 'row', gap: spacing.sm },
   benefit: { flex: 1, minHeight: 104, backgroundColor: colors.paper, borderRadius: radius.sm, padding: 12, justifyContent: 'space-between', borderWidth: 1, borderColor: colors.line },
-  benefitNumber: { color: colors.orangeDark, fontSize: 11, fontWeight: '900' },
+  benefitNumber: { color: colors.actionDark, fontSize: 11, fontWeight: '900' },
   benefitTitle: { color: colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '900' },
-  notice: { borderLeftWidth: 4, borderLeftColor: colors.yellow },
+  notice: { borderLeftWidth: 4, borderLeftColor: colors.sand },
   noticeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   noticeTitle: { color: colors.ink, fontWeight: '900', fontSize: 16, flex: 1 },
-  link: { color: colors.orangeDark, fontWeight: '900', minHeight: 44, textAlignVertical: 'center' },
+  link: { color: colors.actionDark, fontWeight: '900', minHeight: 44, textAlignVertical: 'center' },
   carousel: { gap: spacing.md, paddingRight: spacing.md },
   carouselCard: { width: 286 },
   categoryGrid: { gap: spacing.sm },
-  category: { minHeight: 146, backgroundColor: colors.sage, borderRadius: radius.md, padding: spacing.md, justifyContent: 'space-between', ...shadow },
-  categoryMint: { backgroundColor: colors.mintPale },
-  categoryPeach: { backgroundColor: colors.peach },
-  categoryNumber: { color: colors.orangeDark, fontSize: 11, fontWeight: '900' },
+  category: { minHeight: 146, backgroundColor: colors.skyPale, borderRadius: radius.md, padding: spacing.md, justifyContent: 'space-between', ...shadow },
+  categoryMint: { backgroundColor: colors.icePale },
+  categoryPeach: { backgroundColor: colors.clayPale },
+  categoryNumber: { color: colors.actionDark, fontSize: 11, fontWeight: '900' },
   categoryTitle: { color: colors.ink, fontSize: 21, fontWeight: '900' },
   categoryNote: { color: colors.text, lineHeight: 20, maxWidth: '84%' },
   categoryArrow: { position: 'absolute', right: 18, bottom: 14, color: colors.ink, fontSize: 28, fontWeight: '700' },
   pressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
-  how: { backgroundColor: colors.forestDark, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
+  how: { backgroundColor: colors.ocean, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   howTitle: { color: colors.white, fontSize: 27, lineHeight: 32, fontWeight: '900' },
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.orange, alignItems: 'center', justifyContent: 'center' },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.action, alignItems: 'center', justifyContent: 'center' },
   stepNumberText: { color: colors.white, fontWeight: '900' },
-  stepCopy: { flex: 1, gap: 3 }, stepTitle: { color: colors.white, fontWeight: '900', fontSize: 16 }, stepText: { color: '#E3DAF5', lineHeight: 20 },
+  stepCopy: { flex: 1, gap: 3 }, stepTitle: { color: colors.white, fontWeight: '900', fontSize: 16 }, stepText: { color: '#CEDBF0', lineHeight: 20 },
   service: { padding: spacing.lg, gap: spacing.md, backgroundColor: colors.paper },
   serviceTitle: { color: colors.ink, fontSize: 26, lineHeight: 31, fontWeight: '900' },
 });
