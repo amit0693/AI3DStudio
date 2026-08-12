@@ -40,3 +40,4 @@ Sites provisions the logical bindings declared in `.openai/hosting.json`:
 - `UPLOADS`: Cloudflare R2 customer model files
 
 Do not accept card data in this app. Add payments through a hosted provider checkout and verify its webhook server-side before moving an order out of `awaiting_payment`.
+# AI3DStudio
