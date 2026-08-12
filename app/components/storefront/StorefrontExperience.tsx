@@ -1,713 +1,698 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { QuoteBuilder } from "@/app/components/quote";
+import { LAUNCH_COLLECTIONS, type Collection, type Product, LAUNCH_PRODUCTS } from "@/app/data/catalog";
 import { errorMessage } from "@/lib/errors";
 import { formatCurrency } from "@/lib/format/money";
-import { postJson } from "@/lib/http/json-request";
+import { postFormData, postJson, requestJson } from "@/lib/http/json-request";
+import styles from "./StorefrontExperience.module.css";
 
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: number;
-  badge?: string;
-  color: string;
-  art: string;
-  searchTerms: string[];
+type CustomizationField = {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "date" | "url" | "file";
+  required?: boolean;
+  maxLength?: number;
+  options?: string[];
+  accept?: string;
+  hint?: string;
 };
 
-type CartItem = Product & { quantity: number };
+type CartItem = {
+  id: string;
+  product: Product;
+  quantity: number;
+  color: string;
+  options: Record<string, string>;
+  files: Record<string, File>;
+  rightsConfirmed: boolean;
+};
 
-const products: Product[] = [
-  {
-    id: "desk-sign",
-    name: "Contour Name Sign",
-    category: "Personalized",
-    description: "A layered desk sign, sized and colored for your space.",
-    price: 24,
-    badge: "Launch collection",
-    color: "mint",
-    art: "name-sign",
-    searchTerms: ["name", "sign", "personalized", "desk", "gift", "custom"],
-  },
-  {
-    id: "qr-stand",
-    name: "Counter QR Stand",
-    category: "For business",
-    description: "A sturdy, custom-color stand for menus, reviews, or Wi-Fi.",
-    price: 34,
-    badge: "For local business",
-    color: "orange",
-    art: "qr-stand",
-    searchTerms: ["qr", "wifi", "menu", "reviews", "counter", "business"],
-  },
-  {
-    id: "cable-kit",
-    name: "Cable Tidy Kit",
-    category: "Desk & home",
-    description: "Six low-profile clips that keep a busy desk under control.",
-    price: 18,
-    color: "blue",
-    art: "cable-kit",
-    searchTerms: ["cable", "clips", "organizer", "desk", "home", "tidy"],
-  },
-  {
-    id: "lithophane",
-    name: "Memory Light Panel",
-    category: "Gifts",
-    description: "Turn a favorite photo into a softly glowing keepsake panel.",
-    price: 39,
-    badge: "Gift-ready",
-    color: "yellow",
-    art: "light-panel",
-    searchTerms: ["photo", "memory", "light", "lithophane", "gift", "keepsake"],
-  },
-  {
-    id: "prototype",
-    name: "Prototype Starter",
-    category: "Custom",
-    description: "One functional PLA prototype with a human printability review.",
-    price: 29,
-    badge: "From $29",
-    color: "violet",
-    art: "prototype",
-    searchTerms: ["prototype", "pla", "engineering", "sample", "custom", "functional"],
-  },
+type CheckoutDetails = {
+  name: string;
+  email: string;
+  phone: string;
+  fulfillmentMethod: "pickup" | "shipping";
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+};
+
+type SortKey = "featured" | "best" | "new" | "low" | "high" | "fast";
+
+const CUSTOMIZATION_SCHEMAS: Record<string, CustomizationField[]> = {
+  "PG-01": [
+    { key: "photo", label: "Photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "JPG, PNG, or WebP. The file stays on this device until secure upload at checkout." },
+    { key: "orientation", label: "Orientation", type: "select", required: true, options: ["Portrait", "Landscape"] },
+    { key: "caption", label: "Short caption", type: "text", maxLength: 60, hint: "Optional; we will proof it before printing." },
+  ],
+  "PG-05": [
+    { key: "photo", label: "Pet photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "Use a clear side-profile photo when possible." },
+    { key: "petName", label: "Pet name", type: "text", required: true, maxLength: 40 },
+    { key: "memorialLine", label: "Memorial line", type: "text", maxLength: 80, hint: "Optional" },
+  ],
+  "PD-01": [
+    { key: "size", label: "Size", type: "select", required: true, options: ["Small", "Medium"] },
+    { key: "drainage", label: "Inner pot", type: "select", required: true, options: ["Standard wick", "Extra drainage"] },
+  ],
+  "GH-04": [
+    { key: "bottleDiameter", label: "Bottle diameter", type: "select", required: true, options: ["25 mm", "32 mm", "36 mm"] },
+    { key: "layout", label: "Layout", type: "select", required: true, options: ["Straight", "Corner"] },
+  ],
+  "SE-04": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 40 },
+    { key: "role", label: "Role or room", type: "text", maxLength: 60, hint: "Optional" },
+  ],
+  "BE-01": [
+    { key: "names", label: "Guest names", type: "textarea", required: true, maxLength: 2000, hint: "One name per line. Minimum order: 20 pieces." },
+    { key: "eventDate", label: "Event date", type: "date", required: true },
+  ],
+  "BE-03": [
+    { key: "businessName", label: "Business name", type: "text", required: true, maxLength: 60 },
+    { key: "destinationUrl", label: "QR destination URL", type: "url", required: true, maxLength: 160, hint: "We test the final scan before production." },
+    { key: "logo", label: "Approved logo", type: "file", accept: "image/jpeg,image/png,image/webp", hint: "Optional" },
+    { key: "nfc", label: "NFC option", type: "select", required: true, options: ["QR only", "QR + NFC"] },
+  ],
+  "CP-02": [
+    { key: "partDescription", label: "Part and use", type: "textarea", required: true, maxLength: 1000 },
+    { key: "dimensions", label: "Measurements", type: "text", required: true, maxLength: 200, hint: "Include units, for example 42 × 18 × 6 mm." },
+    { key: "reference", label: "Reference photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "Required. Safety-critical parts are not accepted." },
+  ],
+  "PG-03": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 40 },
+    { key: "subtitle", label: "Subtitle", type: "text", maxLength: 60, hint: "Optional" },
+  ],
+  "PG-04": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 20 },
+  ],
+  "SE-01": [
+    { key: "name", label: "Name", type: "text", required: true, maxLength: 24 },
+    { key: "year", label: "Year", type: "text", maxLength: 4, hint: "Optional; defaults to this year." },
+  ],
+  "SE-06": [
+    { key: "coordinates", label: "Coordinates", type: "text", required: true, maxLength: 60, hint: "For example 37.7749° N, 122.4194° W." },
+    { key: "date", label: "Date", type: "text", maxLength: 30, hint: "Optional" },
+  ],
+  "SE-07": [
+    { key: "photo", label: "Photo", type: "file", required: true, accept: "image/jpeg,image/png,image/webp", hint: "JPG, PNG, or WebP. The file stays on this device until secure upload at checkout." },
+    { key: "orientation", label: "Orientation", type: "select", required: true, options: ["Portrait", "Landscape"] },
+    { key: "caption", label: "Short caption", type: "text", maxLength: 60, hint: "Optional; we will proof it before printing." },
+  ],
+  "BE-02": [
+    { key: "note", label: "Numbering note", type: "text", maxLength: 120, hint: "Optional — e.g. start at table 1 or skip 13." },
+  ],
+  "BE-05": [
+    { key: "text", label: "Tag text", type: "text", required: true, maxLength: 24 },
+    { key: "logo", label: "Approved logo", type: "file", accept: "image/jpeg,image/png,image/webp", hint: "Optional; approved before production." },
+  ],
+};
+
+const EMPTY_CHECKOUT: CheckoutDetails = {
+  name: "",
+  email: "",
+  phone: "",
+  fulfillmentMethod: "pickup",
+  line1: "",
+  line2: "",
+  city: "",
+  state: "CA",
+  postalCode: "",
+};
+
+const RECIPIENTS: Array<[string, Collection]> = [
+  ["Plant lovers", "Plants & Decor"], ["Gamers", "Gaming & Hobbies"],
+  ["Coworkers", "Desk & Tech"], ["Pet owners", "Gifts & Personalization"],
+  ["Weddings", "Business & Events"],
 ];
 
-const categories = ["All", ...Array.from(new Set(products.map((product) => product.category)))];
-
-function formatPrice(value: number) {
-  return formatCurrency(value, { minimumFractionDigits: 0 });
+function money(value: number) {
+  if (value === 0) return "Custom quote";
+  return formatCurrency(value);
 }
 
-function ProductArt({ product }: { product: Product }) {
+const SWATCH_HEX: Record<string, string> = {
+  cream: "#f4ead5",
+  terracotta: "#e8906f",
+  rose: "#e8906f",
+  ocean: "#547d9b",
+  charcoal: "#303637",
+  forest: "#202722",
+};
+
+function ProductImage({ product, small = false, color }: { product: Product; small?: boolean; color?: string }) {
+  const tint = color ? SWATCH_HEX[color.toLowerCase()] : undefined;
   return (
-    <div className={`product-art ${product.color}`} aria-hidden="true">
-      <span className={`model model-${product.art}`}>
-        <i />
-        <b />
-        <em />
-      </span>
-      <span className="art-shadow" />
-      <span className="art-axis">BAY / 01</span>
+    <div className={`catalog-image tone-${product.id.charCodeAt(0) % 4} ${small ? "small" : ""}`}>
+      {/* Product renders live in public/ and intentionally fall back to CSS while assets are generated. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt=""
+        loading="lazy"
+        src={`/products/${product.imageSlug ?? product.slug}.png`}
+        onError={(event) => { event.currentTarget.hidden = true; }}
+      />
+      {tint && <span className="color-tint" aria-hidden="true" style={{ background: tint }} />}
+      <span className="fallback-object" aria-hidden="true"><i /><b /><em /></span>
+      <small aria-hidden="true">{product.id}</small>
     </div>
+  );
+}
+
+function initialOptions(product: Product) {
+  return Object.fromEntries(
+    (CUSTOMIZATION_SCHEMAS[product.id] ?? []).map((field) => [
+      field.key,
+      field.type === "select" ? field.options?.[0] ?? "" : "",
+    ]),
+  );
+}
+
+function itemOptionSummary(item: CartItem) {
+  const labels = new Map(
+    (CUSTOMIZATION_SCHEMAS[item.product.id] ?? []).map((field) => [field.key, field.label]),
+  );
+  return Object.entries(item.options)
+    .filter(([, value]) => value)
+    .map(([key, value]) => `${labels.get(key) ?? key}: ${value}`);
+}
+
+function hasPendingProductFile(item: CartItem) {
+  return (CUSTOMIZATION_SCHEMAS[item.product.id] ?? []).some(
+    (field) => field.type === "file" && Boolean(item.options[field.key]),
+  );
+}
+
+function CustomizationControl({
+  field,
+  value,
+  error,
+  onValue,
+  onFile,
+}: {
+  field: CustomizationField;
+  value: string;
+  error?: string;
+  onValue: (value: string) => void;
+  onFile: (file: File | null) => void;
+}) {
+  const id = `custom-${field.key}`;
+  const common = {
+    id,
+    required: field.required,
+    value,
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => onValue(event.target.value),
+    "aria-invalid": Boolean(error),
+    "aria-describedby": `${id}-help`,
+  };
+  return (
+    <label className={styles.customField} htmlFor={id}>
+      <span>{field.label}{field.required ? " *" : ""}</span>
+      {field.type === "textarea" ? <textarea {...common} maxLength={field.maxLength} rows={4} />
+        : field.type === "select" ? <select {...common}>{field.options?.map((option) => <option key={option}>{option}</option>)}</select>
+          : field.type === "file" ? <input
+              id={id}
+              type="file"
+              required={field.required && !value}
+              accept={field.accept}
+              aria-invalid={Boolean(error)}
+              aria-describedby={`${id}-help`}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                onFile(file);
+                onValue(file?.name ?? "");
+              }}
+            />
+            : <input {...common} type={field.type} maxLength={field.maxLength} />}
+      <small id={`${id}-help`} className={error ? styles.fieldError : undefined}>{error || field.hint || (field.maxLength ? `${value.length}/${field.maxLength}` : "")}</small>
+    </label>
   );
 }
 
 export function StorefrontExperience() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [collection, setCollection] = useState<Collection>("Best Sellers");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("featured");
+  const [material, setMaterial] = useState("All materials");
+  const [priceLimit, setPriceLimit] = useState(100);
+  const [personalizedOnly, setPersonalizedOnly] = useState(false);
+  const [fastOnly, setFastOnly] = useState(false);
+  const [detailColor, setDetailColor] = useState("");
+  const [detailOptions, setDetailOptions] = useState<Record<string, string>>({});
+  const [detailFiles, setDetailFiles] = useState<Record<string, File>>({});
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
+  const [detailRights, setDetailRights] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistJoined, setWaitlistJoined] = useState(false);
-  const [waitlistPending, setWaitlistPending] = useState(false);
+  const [checkout, setCheckout] = useState<CheckoutDetails>(EMPTY_CHECKOUT);
+  const [checkoutPending, setCheckoutPending] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutMessage, setCheckoutMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [waitlistError, setWaitlistError] = useState("");
-  const [waitlistConsent, setWaitlistConsent] = useState(false);
-  const cartCloseRef = useRef<HTMLButtonElement>(null);
-  const cartOpenerRef = useRef<HTMLElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const detailCloseRef = useRef<HTMLButtonElement>(null);
+  const checkoutAttemptRef = useRef({ signature: "", key: "" });
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("baylayer-cart-v2");
+    if (saved) {
+      try {
+        const restored = JSON.parse(saved) as Array<Partial<CartItem>>;
+        const launchById = new Map(LAUNCH_PRODUCTS.map((product) => [product.id, product]));
+        const safeItems = restored.flatMap((item) => {
+          if (!item.product) return [];
+          const product = launchById.get(item.product.id);
+          if (!product) return [];
+          const schema = CUSTOMIZATION_SCHEMAS[product.id] ?? [];
+          const allowed = new Set(schema.map((field) => field.key));
+          const restoredOptions = { ...initialOptions(product), ...Object.fromEntries(Object.entries(item.options ?? {}).filter(([key]) => allowed.has(key))) };
+          for (const field of schema) {
+            if (field.type === "file") restoredOptions[field.key] = "";
+          }
+          return [{
+            id: item.id ?? crypto.randomUUID(),
+            product,
+            quantity: Math.max(product.minimum ?? 1, Number(item.quantity) || product.minimum || 1),
+            color: item.color ?? product.colors[0] ?? "",
+            options: restoredOptions,
+            files: {},
+            rightsConfirmed: false,
+          } satisfies CartItem];
+        });
+        window.setTimeout(() => setCart(safeItems), 0);
+      } catch { /* keep an empty cart */ }
+    }
+  }, []);
+  useEffect(() => {
+    const persisted = cart.map((item) => ({
+      id: item.id,
+      product: item.product,
+      quantity: item.quantity,
+      color: item.color,
+      options: item.options,
+      rightsConfirmed: item.rightsConfirmed,
+    }));
+    window.localStorage.setItem("baylayer-cart-v2", JSON.stringify(persisted));
+  }, [cart]);
+  useEffect(() => {
+    document.body.style.overflow = menuOpen || cartOpen || selected ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen, cartOpen, selected]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const editing = ["INPUT", "SELECT", "TEXTAREA"].includes((event.target as HTMLElement).tagName);
+      if (event.key === "/" && !editing) { event.preventDefault(); searchRef.current?.focus(); }
+      if (event.key === "Escape") { setSelected(null); setCartOpen(false); setMenuOpen(false); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  useEffect(() => {
+    if (!selected) return;
+    detailCloseRef.current?.focus();
+  }, [selected]);
+
+  const materials = useMemo(() => ["All materials", ...Array.from(new Set(LAUNCH_PRODUCTS.map((p) => p.material)))], []);
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = LAUNCH_PRODUCTS.filter((product) => {
+      const inCollection = collection === "Best Sellers" || product.collection === collection;
+      return inCollection && (!q || `${product.name} ${product.description} ${product.collection} ${product.material}`.toLowerCase().includes(q))
+        && product.price <= priceLimit && (material === "All materials" || product.material === material)
+        && (!personalizedOnly || product.personalized) && (!fastOnly || product.productionDays <= 4);
+    });
+    return [...rows].sort((a, b) => {
+      if (sort === "low") return a.price - b.price;
+      if (sort === "high") return b.price - a.price;
+      if (sort === "fast") return a.productionDays - b.productionDays;
+      if (sort === "new") return b.id.localeCompare(a.id);
+      if (sort === "best") return Number(Boolean(b.featured)) - Number(Boolean(a.featured));
+      return Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || a.id.localeCompare(b.id);
+    });
+  }, [collection, fastOnly, material, personalizedOnly, priceLimit, query, sort]);
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const selectedSchema = selected ? CUSTOMIZATION_SCHEMAS[selected.id] ?? [] : [];
+  const selectedHasFile = selectedSchema.some((field) => field.type === "file" && Boolean(detailOptions[field.key]));
+  const cartHasPendingFiles = cart.some(hasPendingProductFile);
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return products.filter((product) => {
-      const matchesCategory = activeCategory === "All" || product.category === activeCategory;
-      if (!matchesCategory) return false;
-      if (!query) return true;
-
-      return [
-        product.name,
-        product.category,
-        product.description,
-        ...product.searchTerms,
-      ].some((value) => value.toLowerCase().includes(query));
-    });
-  }, [activeCategory, searchQuery]);
-
-  useEffect(() => {
-    document.body.style.overflow = cartOpen || menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [cartOpen, menuOpen]);
-
-  useEffect(() => {
-    if (!cartOpen) return;
-    cartOpenerRef.current = document.activeElement as HTMLElement | null;
-    cartCloseRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCartOpen(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      cartOpenerRef.current?.focus();
-    };
-  }, [cartOpen]);
-
-  useEffect(() => {
-    const focusSearch = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      const isEditing =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable;
-
-      if (event.key === "/" && !isEditing) {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-
-      if (event.key === "Escape" && document.activeElement === searchInputRef.current) {
-        setSearchQuery("");
-      }
-    };
-
-    document.addEventListener("keydown", focusSearch);
-    return () => document.removeEventListener("keydown", focusSearch);
-  }, []);
-
-  function addToCart(product: Product) {
-    setCart((items) => {
-      const existing = items.find((item) => item.id === product.id);
-      if (existing) {
-        return items.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
-      return [...items, { ...product, quantity: 1 }];
-    });
-    setCartOpen(true);
+  function chooseCollection(next: Collection) {
+    setCollection(next); setMenuOpen(false);
+    requestAnimationFrame(() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" }));
   }
 
-  function updateQuantity(id: string, amount: number) {
-    setCart((items) =>
-      items
-        .map((item) =>
-          item.id === id
-            ? { ...item, quantity: item.quantity + amount }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
+  function clearCheckoutNotices() {
+    setCheckoutError("");
+    setCheckoutMessage("");
+  }
+
+  function openProduct(product: Product) {
+    clearCheckoutNotices();
+    setDetailColor(product.colors[0] ?? "");
+    setDetailOptions(initialOptions(product));
+    setDetailFiles({});
+    setDetailErrors({});
+    setDetailRights(false);
+    setEditingLineId(null);
+    setSelected(product);
+  }
+
+  function editCartLine(item: CartItem) {
+    clearCheckoutNotices();
+    setDetailColor(item.color);
+    setDetailOptions(item.options);
+    setDetailFiles(item.files);
+    setDetailErrors({});
+    setDetailRights(item.rightsConfirmed);
+    setEditingLineId(item.id);
+    setCartOpen(false);
+    setSelected(item.product);
+  }
+
+  function validateCustomization(product: Product) {
+    const errors: Record<string, string> = {};
+    for (const field of CUSTOMIZATION_SCHEMAS[product.id] ?? []) {
+      const value = detailOptions[field.key]?.trim() ?? "";
+      if (field.required && !value) errors[field.key] = `${field.label} is required.`;
+      if (field.maxLength && value.length > field.maxLength) errors[field.key] = `${field.label} is too long.`;
+      if (field.type === "url" && value) {
+        try {
+          const parsed = new URL(value);
+          if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
+        } catch {
+          errors[field.key] = "Enter a complete http:// or https:// URL.";
+        }
+      }
+    }
+    const hasFile = (CUSTOMIZATION_SCHEMAS[product.id] ?? []).some(
+      (field) => field.type === "file" && Boolean(detailOptions[field.key]),
     );
+    if (hasFile && !detailRights) errors.rights = "Confirm that you have permission to use each selected file.";
+    setDetailErrors(errors);
+    return Object.keys(errors).length === 0;
   }
 
-  async function joinWaitlist(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setWaitlistPending(true);
-    setWaitlistError("");
+  function add(product: Product) {
+    if (product.price === 0) {
+      document.getElementById("custom-print")?.scrollIntoView({ behavior: "smooth" });
+      setSelected(null);
+      return;
+    }
+    if (!validateCustomization(product)) return;
+    clearCheckoutNotices();
+    const minimum = product.minimum ?? 1;
+    const normalizedOptions = Object.fromEntries(
+      Object.entries(detailOptions).map(([key, value]) => [key, value.trim()]),
+    );
+    if (editingLineId) {
+      setCart((items) => items.map((item) => item.id === editingLineId
+        ? { ...item, color: detailColor, options: normalizedOptions, files: detailFiles, rightsConfirmed: detailRights, quantity: Math.max(minimum, item.quantity) }
+        : item));
+      setEditingLineId(null);
+      setSelected(null);
+      setCartOpen(true);
+      return;
+    }
+    setCart((items) => {
+      const signature = JSON.stringify(normalizedOptions);
+      const match = items.find((item) => item.product.id === product.id && item.color === detailColor && JSON.stringify(item.options) === signature);
+      return match
+        ? items.map((item) => item === match ? { ...item, quantity: item.quantity + minimum } : item)
+        : [...items, {
+            id: crypto.randomUUID(),
+            product,
+            quantity: minimum,
+            color: detailColor,
+            options: normalizedOptions,
+            files: detailFiles,
+            rightsConfirmed: detailRights,
+          }];
+    });
+    setSelected(null); setCartOpen(true);
+  }
 
+  function changeQuantity(id: string, delta: number) {
+    clearCheckoutNotices();
+    setCart((items) => items.map((item) => {
+      if (item.id !== id) return item;
+      const minimum = item.product.minimum ?? 1;
+      return { ...item, quantity: Math.max(minimum, Math.min(100, item.quantity + delta)) };
+    }));
+  }
+
+  function removeCartLine(id: string) {
+    clearCheckoutNotices();
+    setCart((items) => items.filter((item) => item.id !== id));
+  }
+
+  async function submitCheckout(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCheckoutError("");
+    setCheckoutMessage("");
+    setCheckoutPending(true);
     try {
-      await postJson(
-        "/api/waitlist",
+      const preparedItems = [];
+      for (const item of cart) {
+        const personalization: Record<string, string | boolean> = { color: item.color, ...item.options };
+        for (const [fieldKey, file] of Object.entries(item.files)) {
+          const uploadForm = new FormData();
+          uploadForm.append("file", file);
+          const uploadResult = await postFormData<{
+            upload?: { id: string; accessToken: string; filename: string };
+          }>("/api/personalization-uploads", uploadForm, `We could not securely upload ${file.name}.`);
+          if (!uploadResult.upload) {
+            throw new Error(`We could not securely upload ${file.name}.`);
+          }
+          personalization[fieldKey] = uploadResult.upload.id;
+          personalization[`${fieldKey}Token`] = uploadResult.upload.accessToken;
+        }
+        if (Object.keys(item.files).length > 0) personalization.rightsConfirmed = item.rightsConfirmed;
+        preparedItems.push({
+          productId: item.product.id,
+          quantity: Math.max(item.product.minimum ?? 1, item.quantity),
+          personalization,
+        });
+      }
+
+      const body = {
+        name: checkout.name.trim(),
+        email: checkout.email.trim(),
+        phone: checkout.phone.trim() || undefined,
+        fulfillmentMethod: checkout.fulfillmentMethod,
+        shippingAddress: checkout.fulfillmentMethod === "shipping" ? {
+          line1: checkout.line1.trim(),
+          line2: checkout.line2.trim() || undefined,
+          city: checkout.city.trim(),
+          state: checkout.state.trim().toUpperCase(),
+          postalCode: checkout.postalCode.trim(),
+          country: "US",
+        } : undefined,
+        items: preparedItems,
+      };
+      const signature = JSON.stringify({ ...body, items: cart.map((item) => ({ id: item.id, quantity: item.quantity, options: item.options })) });
+      if (checkoutAttemptRef.current.signature !== signature) {
+        checkoutAttemptRef.current = { signature, key: crypto.randomUUID() };
+      }
+      const result = await requestJson<{
+        order?: { orderNumber?: string; trackingToken?: string };
+        checkout?: { available?: boolean; url?: string; message?: string };
+      }>(
+        "/api/orders",
         {
-          email: waitlistEmail,
-          feature: "ai-scan",
-          marketingConsent: waitlistConsent,
-          source: "storefront",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": checkoutAttemptRef.current.key,
+          },
+          body: JSON.stringify(body),
         },
-        "We could not save your email yet.",
+        "We could not prepare this order.",
       );
-      setWaitlistJoined(true);
+      if (result.checkout?.url) {
+        window.location.assign(result.checkout.url);
+        return;
+      }
+      const orderLabel = result.order?.orderNumber ? `Order request ${result.order.orderNumber} was saved. ` : "Your order request was saved. ";
+      setCheckoutMessage(`${orderLabel}${result.checkout?.message || "Payment is not configured, so no payment details were collected."}`);
     } catch (error) {
-      setWaitlistError(errorMessage(error, "We could not save your email yet."));
+      setCheckoutError(errorMessage(error, "We could not prepare this order."));
     } finally {
-      setWaitlistPending(false);
+      setCheckoutPending(false);
     }
   }
 
-  function closeMenu() {
-    setMenuOpen(false);
+  async function joinWaitlist(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setPending(true); setWaitlistError("");
+    try {
+      await postJson(
+        "/api/waitlist",
+        { email, feature: "product-drops", marketingConsent: consent, source: "storefront" },
+        "We couldn’t save that email yet.",
+      );
+      setJoined(true);
+    } catch (error) { setWaitlistError(errorMessage(error, "Please try again.")); }
+    finally { setPending(false); }
   }
 
   return (
-    <main>
-      <a className="skip-link" href="#main-content">
-        Skip to content
-      </a>
-
-      <div className="announcement">
-        <span>Made in the Bay Area</span>
-        <span aria-hidden="true">◆</span>
-        <span>Small-batch, human-checked</span>
-        <a href="#custom-print">Request a custom print&nbsp; →</a>
-      </div>
-
+    <main id="top">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <div className="announcement"><span>Designed and printed to order in the USA</span><span>Free shipping over $65</span><a href="#custom-print">Have a file? Get a quote →</a></div>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="BayLayer Labs home">
-          <span className="brand-mark" aria-hidden="true" />
-          <span>
-            BayLayer <b>Labs</b>
-          </span>
-        </a>
-
+        <a className="brand" href="#top" aria-label="BayLayer Labs home"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a>
         <nav className="desktop-nav" aria-label="Main navigation">
-          <a href="#shop">Shop</a>
-          <a href="#catalog-search">Search</a>
-          <a href="#custom-print">Custom print</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#ai-scan">AI Scan <small>SOON</small></a>
+          <button type="button" onClick={() => chooseCollection("Best Sellers")}>Shop</button>
+          <button type="button" onClick={() => chooseCollection("Gifts & Personalization")}>Personalized</button>
+          <a href="#business">Business & Events</a><a href="#custom-print">Custom 3D Print</a><a href="#story">About</a><a href="/company">Company tracker</a>
         </nav>
-
         <div className="header-actions">
-          <button
-            className="menu-button"
-            type="button"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span />
-            <span />
-          </button>
-          <button
-            className="cart-button"
-            type="button"
-            onClick={() => setCartOpen(true)}
-            aria-label={`Open cart with ${itemCount} items`}
-          >
-            Cart <span>{itemCount}</span>
-          </button>
+          <button className="icon-button search-jump" type="button" onClick={() => searchRef.current?.focus()} aria-label="Search products">⌕</button>
+          <a className="account-button" href="/account">Account</a>
+          <button className="menu-button" type="button" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu"><span /><span /></button>
+          <button className="cart-button" type="button" onClick={() => setCartOpen(true)} aria-label={`Open cart with ${itemCount} items`}>Bag <span>{itemCount}</span></button>
         </div>
-
-        <div
-          id="mobile-menu"
-          className={`mobile-menu ${menuOpen ? "open" : ""}`}
-          aria-hidden={!menuOpen}
-        >
-          <nav aria-label="Mobile navigation">
-            <a href="#shop" onClick={closeMenu}>Shop <span>01</span></a>
-            <a href="#catalog-search" onClick={closeMenu}>Search <span>02</span></a>
-            <a href="#custom-print" onClick={closeMenu}>Custom print <span>03</span></a>
-            <a href="#how-it-works" onClick={closeMenu}>How it works <span>04</span></a>
-            <a href="#ai-scan" onClick={closeMenu}>AI Scan <span>Coming soon</span></a>
-          </nav>
-          <p>Useful objects, made close to home.</p>
-        </div>
+        {menuOpen && <div className="mobile-menu"><nav aria-label="Mobile navigation"><a href="/account">Your account <span>→</span></a>{LAUNCH_COLLECTIONS.map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}<span>→</span></button>)}<a href="#story" onClick={() => setMenuOpen(false)}>About <span>→</span></a><a href="/company" onClick={() => setMenuOpen(false)}>Company tracker <span>→</span></a></nav></div>}
       </header>
 
       <div id="main-content">
-        <section className="hero" id="top">
+        <section className="hero">
           <div className="hero-copy">
-            <p className="eyebrow"><span /> 3D PRINTING, REIMAGINED LOCALLY</p>
-            <h1>
-              Good ideas deserve<br />
-              <em>another dimension.</em>
-            </h1>
-            <p className="hero-intro">
-              Shop useful, personality-filled prints—or bring us the file for
-              something entirely your own. Printed and checked in the Bay Area.
-            </p>
-            <div className="hero-actions">
-              <a className="button button-dark" href="#shop">
-                Shop the first drop <span>↗</span>
-              </a>
-              <a className="text-link" href="#custom-print">
-                I have a 3D file <span>→</span>
-              </a>
-            </div>
-            <div className="hero-proof" aria-label="Service highlights">
-              <div><strong>LOCAL</strong><span>Bay Area production</span></div>
-              <div><strong>PLA</strong><span>Thoughtful material choices</span></div>
-              <div><strong>REVIEW</strong><span>Human printability check</span></div>
-            </div>
+            <p className="eyebrow"><span /> PERSONAL, USEFUL, MADE TO ORDER</p>
+            <h1>{LAUNCH_PRODUCTS.length} useful ideas.<br /><em>Made personally.</em></h1>
+            <p className="hero-intro">Our focused launch collection brings together personalized gifts, business signs, event pieces, practical parts, and modular tools—printed and human-checked in the Bay Area.</p>
+            <div className="hero-actions"><button className="button button-dark" type="button" onClick={() => chooseCollection("Best Sellers")}>Shop the launch collection <span>↗</span></button><button className="button button-quiet" type="button" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}>Create yours <span>→</span></button></div>
+            <div className="hero-proof"><div><strong>Made to order</strong><span>Less inventory waste</span></div><div><strong>Personalized</strong><span>Preview before print</span></div><div><strong>Human checked</strong><span>Every single piece</span></div></div>
           </div>
-
-          <div className="hero-stage" aria-label="Layered 3D printed name sign illustration">
-            <span className="stage-label top">LAYER BY LAYER</span>
-            <span className="stage-label side">MADE LOCAL</span>
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="hero-object">
-              <span className="hero-object-face">BAY</span>
-              <span className="hero-object-edge" />
-              <span className="hero-object-base" />
-            </div>
-            <span className="hero-dot dot-one" />
-            <span className="hero-dot dot-two" />
-            <span className="hero-dot dot-three" />
-            <p><b>01</b> CONTOUR SERIES<br />PERSONALIZED DESK OBJECT</p>
-          </div>
-          <p className="hero-note">*Final timing depends on size, queue, and design review.</p>
-        </section>
-
-        <section className="ticker" aria-label="Product categories">
-          <span>PERSONALIZED GIFTS</span><i>✦</i>
-          <span>DESK ESSENTIALS</span><i>✦</i>
-          <span>SMALL-BATCH BUSINESS</span><i>✦</i>
-          <span>PROTOTYPES</span><i>✦</i>
-        </section>
-
-        <section className="shop-section" id="shop">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow"><span /> THE FIRST DROP</p>
-              <h2>Small objects.<br /><em>Big usefulness.</em></h2>
-            </div>
-            <p>
-              Designed for real desks, homes, and businesses. Every piece is
-              printed to order so you can choose the finish that feels yours.
-            </p>
-          </div>
-
-          <div className="catalog-search" id="catalog-search">
-            <div className="search-field-wrap">
-              <label htmlFor="product-search">Find the right print</label>
-              <div className="search-field">
-                <span className="search-icon" aria-hidden="true" />
-                <input
-                  ref={searchInputRef}
-                  id="product-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search gifts, desk tools, QR stands…"
-                  autoComplete="off"
-                  aria-keyshortcuts="/"
-                />
-                {searchQuery ? (
-                  <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear product search">
-                    Clear
-                  </button>
-                ) : (
-                  <kbd aria-label="Keyboard shortcut: slash">/</kbd>
-                )}
-              </div>
-            </div>
-
-            <div className="category-filter" aria-label="Filter products by category">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  className={activeCategory === category ? "active" : ""}
-                  aria-pressed={activeCategory === category}
-                  onClick={() => setActiveCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-
-            <div className="search-status" aria-live="polite" aria-atomic="true">
-              <span>{filteredProducts.length} {filteredProducts.length === 1 ? "result" : "results"}</span>
-              {(searchQuery || activeCategory !== "All") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setActiveCategory("All");
-                    searchInputRef.current?.focus();
-                  }}
-                >
-                  Reset search
-                </button>
-              )}
-            </div>
-          </div>
-
-          {filteredProducts.length ? (
-            <div className="product-grid">
-            {filteredProducts.map((product) => {
-              const index = products.findIndex((item) => item.id === product.id);
-              return (
-              <article className={`product-card product-${index + 1}`} key={product.id}>
-                <div className="product-visual">
-                  {product.badge && <span className="product-badge">{product.badge}</span>}
-                  <ProductArt product={product} />
-                  <button
-                    type="button"
-                    className="quick-add"
-                    onClick={() => addToCart(product)}
-                    aria-label={`Add ${product.name} to cart`}
-                  >
-                    <span>+</span> Quick add
-                  </button>
-                </div>
-                <div className="product-info">
-                  <p>{product.category}</p>
-                  <h3>{product.name}</h3>
-                  <p className="product-description">{product.description}</p>
-                  <div>
-                    <strong>{formatPrice(product.price)}</strong>
-                    <button className="card-add-button" type="button" onClick={() => addToCart(product)}>
-                      Add <span>→</span>
-                    </button>
-                  </div>
-                </div>
-              </article>
-              );
-            })}
-            </div>
-          ) : (
-            <div className="search-empty" role="status">
-              <span className="empty-layers" aria-hidden="true"><i /><i /><i /></span>
-              <div>
-                <p className="eyebrow"><span /> NO MATCH YET</p>
-                <h3>That idea may need a custom print.</h3>
-                <p>Try a broader term, clear the category, or send us your file for a human-reviewed quote.</p>
-                <div>
-                  <button
-                    type="button"
-                    className="button button-dark"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setActiveCategory("All");
-                      searchInputRef.current?.focus();
-                    }}
-                  >
-                    Clear search
-                  </button>
-                  <a className="button button-outline" href="#custom-print">Start custom quote <span>→</span></a>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="custom-section" id="custom-print">
-          <div className="custom-copy">
-            <p className="eyebrow light"><span /> CUSTOM PRINT STUDIO</p>
-            <h2>Your file.<br /><em>Made physical.</em></h2>
-            <p>
-              Have an STL ready to go? Share it for a printability review and a
-              clear quote. A real person checks every custom job before the
-              printer starts.
-            </p>
-            <ul>
-              <li><span>01</span> Upload your STL</li>
-              <li><span>02</span> Pick material, color & finish</li>
-              <li><span>03</span> Review quote before paying</li>
-            </ul>
-            <p className="custom-note">Need design help? Tell us what you’re making in the notes.</p>
-          </div>
-
-          <QuoteBuilder className="quote-builder-shell" heading="Estimate your STL" />
-        </section>
-
-        <section className="process-section" id="how-it-works">
-          <div className="section-heading process-heading">
-            <div>
-              <p className="eyebrow"><span /> FROM CLICK TO OBJECT</p>
-              <h2>A short path to<br /><em>something real.</em></h2>
-            </div>
-            <p>We keep the process visible, the choices simple, and the quality check human.</p>
-          </div>
-          <div className="process-grid">
-            <article>
-              <span className="process-number">01</span>
-              <div className="process-icon choose" aria-hidden="true"><i /><i /><i /></div>
-              <h3>Choose or upload</h3>
-              <p>Pick a proven design from the shop or bring your own 3D file.</p>
-            </article>
-            <article>
-              <span className="process-number">02</span>
-              <div className="process-icon review" aria-hidden="true"><i /><i /></div>
-              <h3>We review it</h3>
-              <p>We check size, material, printability, timing, and your final price.</p>
-            </article>
-            <article>
-              <span className="process-number">03</span>
-              <div className="process-icon make" aria-hidden="true"><i /><i /><i /></div>
-              <h3>Made layer by layer</h3>
-              <p>Your piece is printed, cleaned, and quality checked in the Bay Area.</p>
-            </article>
-            <article>
-              <span className="process-number">04</span>
-              <div className="process-icon deliver" aria-hidden="true"><i /><i /></div>
-              <h3>Pickup or delivery</h3>
-              <p>Choose local pickup when available or have it shipped to your door.</p>
-            </article>
+          <div className="hero-stage">
+            <div className="hero-product"><ProductImage product={LAUNCH_PRODUCTS[0]} /><span>Light on</span></div>
+            <div className="hero-caption"><small>OUR #1 GIFT</small><strong>Photo Lithophane<br />Night Light</strong><span>$39.99 · made in 3–5 days</span></div>
           </div>
         </section>
 
-        <section className="local-section">
-          <div className="local-map" aria-hidden="true">
-            <span className="map-ring ring-one" />
-            <span className="map-ring ring-two" />
-            <span className="map-pin pin-sf"><i />SF</span>
-            <span className="map-pin pin-oak"><i />OAK</span>
-            <span className="map-pin pin-sj"><i />SJ</span>
-            <span className="map-route route-one" />
-            <span className="map-route route-two" />
-            <strong>THE<br />BAY</strong>
-          </div>
-          <div className="local-copy">
-            <p className="eyebrow"><span /> BUILT NEARBY</p>
-            <h2>Less factory.<br /><em>More neighbor.</em></h2>
-            <p>
-              BayLayer Labs is growing from one local print queue. That means
-              honest lead times, fewer miles, and a maker you can actually reach.
-            </p>
-            <div className="local-points">
-              <span><b>Local</b> Bay Area production</span>
-              <span><b>Small batch</b> No warehouse waste</span>
-              <span><b>Direct</b> Talk to the person making it</span>
+        <section className="trust-strip" aria-label="Service benefits"><span>✦ Upload-safe personalization</span><span>✦ Small-batch quality checked</span><span>✦ Local pickup available</span><span>✦ Clear production times</span></section>
+
+        <section className="shop-section" id="catalog">
+          <div className="section-heading"><div><p className="eyebrow"><span /> THE FOCUSED FIRST DROP</p><h2>{LAUNCH_PRODUCTS.length} launch offers.<br /><em>Each with a job.</em></h2></div><p>We narrowed the shelf to {LAUNCH_PRODUCTS.length} high-value products for gifting, business, events, hobbies, plants, and practical repairs. Every order is made only after you choose it.</p></div>
+
+          <div className="catalog-tabs" role="tablist" aria-label="Product collections">{LAUNCH_COLLECTIONS.map((item) => <button role="tab" aria-selected={collection === item} className={collection === item ? "active" : ""} key={item} type="button" onClick={() => setCollection(item)}>{item}</button>)}</div>
+
+          <div className="catalog-tools">
+            <label className="search-field"><span aria-hidden="true">⌕</span><span className="sr-only">Search products</span><input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} type="search" placeholder="Search gifts, planters, desk tools…" />{query && <button type="button" onClick={() => setQuery("")}>Clear</button>}</label>
+            <div className="filter-row">
+              <label>Material<select value={material} onChange={(e) => setMaterial(e.target.value)}>{materials.map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label>Max price<select value={priceLimit} onChange={(e) => setPriceLimit(Number(e.target.value))}><option value="20">Under $20</option><option value="35">Under $35</option><option value="50">Under $50</option><option value="100">Any price</option></select></label>
+              <label>Sort<select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}><option value="featured">Featured</option><option value="best">Best selling</option><option value="new">Newest</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="fast">Fastest production</option></select></label>
+              <label className="check-filter"><input type="checkbox" checked={personalizedOnly} onChange={(e) => setPersonalizedOnly(e.target.checked)} /> Personalized</label>
+              <label className="check-filter"><input type="checkbox" checked={fastOnly} onChange={(e) => setFastOnly(e.target.checked)} /> Ready in 4 days</label>
             </div>
           </div>
+
+          <div className="result-line"><strong>{collection}</strong><span>{visible.length} {visible.length === 1 ? "product" : "products"}</span></div>
+          {visible.length ? <div className="product-grid">{visible.map((product) => <article className="product-card" key={product.id}>
+            <button className="product-visual" type="button" onClick={() => openProduct(product)} aria-label={`View ${product.name}`}><ProductImage product={product} />{product.badge && <span className="product-badge">{product.badge}</span>}<span className="quick-view">Quick customize</span></button>
+            <div className="product-info"><p>{product.collection}</p><button type="button" onClick={() => openProduct(product)}><h3>{product.name}</h3></button><p className="product-description">{product.description}</p><div className="swatch-row" aria-label={`Available colors: ${product.colors.join(", ")}`}>{product.colors.slice(0,5).map((color) => <i key={color} title={color} className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} />)}</div><div><strong>{product.priceLabel ?? (product.price === 0 ? "Request a quote" : `${product.badge?.startsWith("From") ? "" : "From "}${money(product.price)}`)}</strong><span>{product.productionDays} day production</span></div></div>
+          </article>)}</div> : <div className="empty-results"><h3>No exact match—yet.</h3><p>Reset a filter or share your own model for a custom quote.</p><button className="button button-dark" type="button" onClick={() => { setQuery(""); setMaterial("All materials"); setPriceLimit(100); setPersonalizedOnly(false); setFastOnly(false); }}>Reset filters</button></div>}
         </section>
 
-        <section className="scan-section" id="ai-scan">
-          <div className="scan-visual" aria-hidden="true">
-            <div className="phone-frame">
-              <div className="phone-top" />
-              <div className="scan-grid" />
-              <div className="scan-object"><i /><b /><em /></div>
-              <span className="scan-corner c1" />
-              <span className="scan-corner c2" />
-              <span className="scan-corner c3" />
-              <span className="scan-corner c4" />
-              <span className="scan-line" />
-              <small>CAPTURE 18 / 40</small>
-            </div>
-            <span className="scan-orbit" />
-          </div>
-          <div className="scan-copy">
-            <span className="coming-pill">COMING SOON · EARLY ACCESS</span>
-            <p className="eyebrow light"><span /> AI OBJECT SCAN</p>
-            <h2>See it. Scan it.<br /><em>Make it yours.</em></h2>
-            <p>
-              We’re exploring a guided camera experience that turns a set of
-              object photos into a print-ready starting point—then checks the
-              result with a human before quoting.
-            </p>
-            {waitlistJoined ? (
-              <div className="waitlist-success" role="status">
-                <span>✓</span>
-                <div><strong>You’re on the preview list.</strong><br />We’ll share updates before public launch.</div>
-              </div>
-            ) : (
-              <form
-                className="waitlist-form"
-                onSubmit={joinWaitlist}
-              >
-                <label className="sr-only" htmlFor="waitlist-email">Email address</label>
-                <input
-                  id="waitlist-email"
-                  type="email"
-                  required
-                  value={waitlistEmail}
-                  onChange={(event) => setWaitlistEmail(event.target.value)}
-                  placeholder="you@example.com"
-                />
-                <button type="submit" disabled={waitlistPending}>
-                  {waitlistPending ? "Joining…" : "Join early access"} <span>→</span>
-                </button>
-                <label className="consent-control">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={waitlistConsent}
-                    onChange={(event) => setWaitlistConsent(event.target.checked)}
-                  />
-                  <span>I agree to receive AI Scan preview updates and accept the <a href="/privacy">privacy notice</a>.</span>
-                </label>
-              </form>
-            )}
-            {waitlistError ? <p className="form-error" role="alert">{waitlistError}</p> : null}
-            <p className="form-note">No spam. Just product updates and an invitation when it’s ready.</p>
-          </div>
-        </section>
+        <section className="process-section" id="how-it-works"><div className="section-heading"><div><p className="eyebrow"><span /> HOW CUSTOMIZATION WORKS</p><h2>Yours in<br /><em>three clear steps.</em></h2></div></div><div className="process-grid"><article><span>01</span><h3>Choose your piece</h3><p>Pick a proven product, color, size, and the personal details you want.</p></article><article><span>02</span><h3>Preview & confirm</h3><p>We review uploaded photos, logos, and wording before anything prints.</p></article><article><span>03</span><h3>Printed for you</h3><p>Your order is made, cleaned, checked, packed, and sent from the Bay Area.</p></article></div></section>
 
-        <section className="cta-section">
-          <p className="eyebrow"><span /> HAVE SOMETHING IN MIND?</p>
-          <h2>Let’s make the idea<br /><em>you keep thinking about.</em></h2>
-          <div>
-            <a className="button button-dark" href="#shop">Start with the shop <span>↗</span></a>
-            <a className="button button-outline" href="#custom-print">Bring your own file <span>→</span></a>
-          </div>
-        </section>
+        <section className="before-after"><div className="before-card"><span>YOUR PHOTO</span><div className="photo-placeholder">Photo<br />upload</div></div><div className="transform-arrow">→</div><div className="after-card"><span>YOUR LIGHT</span><ProductImage product={LAUNCH_PRODUCTS[0]} /></div><div className="transform-copy"><p className="eyebrow"><span /> FROM MEMORY TO OBJECT</p><h2>A personal photo,<br /><em>made luminous.</em></h2><p>We crop, translate, and proof your image for the best relief detail—then print a piece that only comes alive when the light turns on.</p><button type="button" className="button button-dark" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}>Create a photo light</button></div></section>
+
+        <section className="recipient-section"><div className="section-heading"><div><p className="eyebrow"><span /> SHOP BY PERSON</p><h2>A useful gift feels<br /><em>more personal.</em></h2></div></div><div className="recipient-grid">{RECIPIENTS.map(([label, target], index) => <button key={label} type="button" className={`recipient-card recipient-${index}`} onClick={() => chooseCollection(target)}><span>For</span><strong>{label}</strong><i>Explore →</i></button>)}</div></section>
+
+        <section className="reviews"><p className="eyebrow light"><span /> PILOT PROMISE</p><blockquote>Useful products, clear limits, and a human review before personalized work reaches the printer.</blockquote><div><strong>BayLayer Labs</strong><span>{LAUNCH_PRODUCTS.length} focused launch offers · Bay Area</span></div><div className="review-points"><span>No fabricated ratings</span><span>File rights confirmed</span><span>Human support</span></div></section>
+
+        <section className="custom-section" id="custom-print"><div className="custom-copy"><p className="eyebrow light"><span /> CUSTOM PRINT STUDIO</p><h2>Your file.<br /><em>Made physical.</em></h2><p>Have an STL ready? Get a geometry-based planning estimate, then a human printability review. We do not accept weapons, medical devices, safety-critical parts, or unauthorized designs.</p><ul><li><span>01</span> Upload an STL</li><li><span>02</span> Pick material & finish</li><li><span>03</span> Review before paying</li></ul></div><QuoteBuilder className="quote-builder-shell" heading="Estimate your STL" /></section>
+
+        <section className="business-section" id="business"><div><p className="eyebrow"><span /> BUSINESS & EVENTS</p><h2>Small batches.<br /><em>Big impression.</em></h2><p>Branded counter signs and event place names with clear minimums, customer-approved files, and human review before production.</p><button type="button" className="button button-dark" onClick={() => chooseCollection("Business & Events")}>Shop business & events</button></div><div className="stat-grid"><span><strong>20</strong> place-name minimum</span><span><strong>1</strong> review before production</span><span><strong>US</strong> pickup and shipping</span><span><strong>100%</strong> logo rights confirmed</span></div></section>
+
+        <section className="materials" id="story"><div className="section-heading"><div><p className="eyebrow"><span /> MATERIALS & CARE</p><h2>Designed honestly.<br /><em>Cared for simply.</em></h2></div></div><div className="material-grid"><article><span>PLA</span><h3>Crisp detail for indoors</h3><p>Ideal for gifts and desk pieces. Keep away from high heat, dishwashers, and hot cars.</p></article><article><span>PETG</span><h3>Tougher around water</h3><p>Our choice for planters, bathrooms, and practical parts. Hand wash with cool water.</p></article><article><span>TPU</span><h3>Flexible where it helps</h3><p>Used for feet, cable clips, and protective contact points that need some give.</p></article></div></section>
+
+        <section className="faq"><div><p className="eyebrow"><span /> GOOD TO KNOW</p><h2>Questions,<br /><em>answered.</em></h2></div><div className="faq-list"><details><summary>When will my order ship?</summary><p>Most catalog pieces take 3–7 business days to make. Each product shows its production estimate before you add it to your bag.</p></details><details><summary>Can I return a personalized product?</summary><p>Personalized pieces cannot be returned for a change of mind, but we will make manufacturing errors or transit damage right.</p></details><details><summary>Are 3D printed products food-safe?</summary><p>No. We do not market untreated FDM prints for direct food contact, and printed items are not dishwasher safe.</p></details><details><summary>Can you print any model I send?</summary><p>No. We review ownership, printability, safety, and policy before accepting every custom job.</p></details></div></section>
+
+        <section className="newsletter" id="ai-scan"><div><p className="eyebrow light"><span /> AI OBJECT SCAN + NEW DROPS</p><h2>What should we<br /><em>make next?</em></h2><p>Join the early list for new product releases and our upcoming guided AI object scan.</p></div>{joined ? <div className="success" role="status"><strong>You’re on the list.</strong><span>Watch your inbox for the next drop.</span></div> : <form onSubmit={joinWaitlist}><label><span>Email address</span><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label><label className="consent"><input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} /> I agree to product emails and the <a href="/privacy">privacy notice</a>.</label><button disabled={pending} className="button" type="submit">{pending ? "Joining…" : "Join the list →"}</button>{waitlistError && <p role="alert">{waitlistError}</p>}</form>}</section>
       </div>
 
-      <footer>
-        <div className="footer-brand">
-          <a className="brand inverse" href="#top" aria-label="BayLayer Labs home">
-            <span className="brand-mark" aria-hidden="true" />
-            <span>BayLayer <b>Labs</b></span>
-          </a>
-          <p>Useful objects, made close to home.</p>
-          <span>Bay Area, California</span>
-        </div>
-        <div className="footer-links">
-          <div><strong>Explore</strong><a href="#shop">Shop</a><a href="#custom-print">Custom print</a><a href="#ai-scan">AI Scan</a></div>
-          <div><strong>Help</strong><a href="#how-it-works">How it works</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a></div>
-          <div><strong>Launch</strong><a href="#ai-scan">AI Scan preview</a><a href="mailto:baylayerlabs@gmail.com?subject=BayLayer%20Labs%20partnership">Partner with us</a><a href="mailto:baylayerlabs@gmail.com?subject=BayLayer%20Labs%20updates">Email updates</a></div>
-        </div>
-        <div className="footer-bottom">
-          <span>© 2026 BayLayer Labs</span>
-          <span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/print-policy">Print policy</a></span>
-          <span>Ideas, made local.</span>
-        </div>
-      </footer>
+      <footer><div className="footer-main"><div><a className="brand inverse" href="#top"><span className="brand-mark" /><span>BayLayer <b>Labs</b></span></a><p>Useful, personalized objects made close to home.</p><span>Bay Area, California</span></div><nav aria-label="Footer shop"><strong>Shop</strong>{LAUNCH_COLLECTIONS.slice(0,5).map((item) => <button type="button" key={item} onClick={() => chooseCollection(item)}>{item}</button>)}</nav><nav aria-label="Footer help"><strong>Help</strong><a href="/account">Your account</a><a href="#how-it-works">How it works</a><a href="/company">Company tracker</a><a href="mailto:baylayerlabs@gmail.com">Contact</a><a href="/print-policy">Print policy</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div><div className="footer-bottom"><span>© 2026 BayLayer Labs</span><span>Ideas, made local.</span></div></footer>
 
-      {cartOpen && (
-        <div className="drawer-layer">
-          <button
-            className="drawer-backdrop"
-            type="button"
-            onClick={() => setCartOpen(false)}
-            aria-label="Close cart"
-          />
-          <aside className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
-            <div className="cart-header">
-              <div><p>Your cart</p><h2 id="cart-title">Ready to make.</h2></div>
-              <button ref={cartCloseRef} type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button>
-            </div>
-            {cart.length === 0 ? (
-              <div className="empty-cart">
-                <div className="empty-object" aria-hidden="true"><i /><i /><i /></div>
-                <h3>Your cart is still two-dimensional.</h3>
-                <p>Add something from the first drop and we’ll take it from there.</p>
-                <button type="button" className="button button-dark" onClick={() => setCartOpen(false)}>Explore the shop</button>
+      {selected && <div className="modal-layer">
+        <button className="drawer-backdrop" type="button" aria-label="Close product details" onClick={() => setSelected(null)} />
+        <section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+          <button ref={detailCloseRef} className="modal-close" type="button" aria-label="Close product details" onClick={() => setSelected(null)}>×</button>
+          <div className="detail-gallery"><ProductImage product={selected} color={detailColor} /><div className="thumbs"><ProductImage product={selected} small /><span>Details</span><span>In use</span><span>Scale</span></div></div>
+          <div className="detail-copy">
+            <p className="eyebrow"><span /> {selected.collection}</p><h2 id="detail-title">{selected.name}</h2>
+            <p className="detail-price">{selected.priceLabel ?? (selected.price === 0 ? "Custom quote" : `From ${money(selected.price)}`)}</p>
+            <p>{selected.description}</p><div className="delivery-note"><strong>Made to order</strong><span>Estimated production: {selected.productionDays} business days</span></div>
+            <fieldset><legend>Color · <b>{detailColor}</b></legend><div className="detail-swatches">{selected.colors.map((color) => <button className={detailColor === color ? "active" : ""} aria-label={`Choose ${color}`} title={color} type="button" key={color} onClick={() => setDetailColor(color)}><i className={`swatch ${color.toLowerCase().replaceAll(" ", "-")}`} /></button>)}</div><small className="color-disclaimer">Preview tints to your chosen color; the final print may vary slightly by material batch.</small></fieldset>
+            {selectedSchema.length > 0 && <div className={styles.customizationGrid}>{selectedSchema.map((field) => <CustomizationControl
+              key={field.key}
+              field={field}
+              value={detailOptions[field.key] ?? ""}
+              error={detailErrors[field.key]}
+              onValue={(value) => { setDetailOptions((options) => ({ ...options, [field.key]: value })); setDetailErrors((errors) => ({ ...errors, [field.key]: "" })); }}
+              onFile={(file) => setDetailFiles((files) => { const next = { ...files }; if (file) next[field.key] = file; else delete next[field.key]; return next; })}
+            />)}</div>}
+            {selectedHasFile && <label className="rights-check"><input type="checkbox" checked={detailRights} onChange={(event) => { setDetailRights(event.target.checked); setDetailErrors((errors) => ({ ...errors, rights: "" })); }} /> I own or have permission to use every photo, drawing, logo, or design selected here.</label>}
+            {detailErrors.rights && <p className={styles.formError} role="alert">{detailErrors.rights}</p>}
+            {selectedHasFile && <p className={styles.uploadNote}>Selected files stay on this device until checkout. Checkout uploads them securely before creating the order; selecting a file here does not claim it has been uploaded.</p>}
+            <dl className="detail-facts"><div><dt>Material</dt><dd>{selected.material}</dd></div><div><dt>Included</dt><dd>Finished print + care card</dd></div><div><dt>Care</dt><dd>Cool water, hand clean only</dd></div></dl>
+            {selected.safety && <p className="safety-note">Safety: {selected.safety}</p>}
+            <button className="button button-dark detail-add" type="button" onClick={() => add(selected)}>{selected.price === 0 ? "Start custom quote" : editingLineId ? "Save cart changes" : `Add to bag · ${money(selected.price * (selected.minimum ?? 1))}`}</button>
+          </div>
+        </section>
+      </div>}
+
+      {cartOpen && <div className="drawer-layer">
+        <button className="drawer-backdrop" type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" />
+        <aside className={`cart-drawer ${styles.checkoutDrawer}`} role="dialog" aria-modal="true" aria-labelledby="cart-title">
+          <div className="cart-header"><div><p>Your bag · {itemCount} items</p><h2 id="cart-title">Ready to make.</h2></div><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button></div>
+          {cart.length === 0 ? <div className="empty-cart"><h3>Your bag is still two-dimensional.</h3><p>Add a useful object and we’ll take it from there.</p><button className="button button-dark" type="button" onClick={() => setCartOpen(false)}>Explore the shop</button></div> : <>
+            <div className="cart-items">{cart.map((item) => <div className={`cart-item ${styles.cartLine}`} key={item.id}>
+              <ProductImage product={item.product} color={item.color} small />
+              <div><p>{item.color}</p><h3>{item.product.name}</h3><ul className={styles.optionList}>{itemOptionSummary(item).map((summary) => <li key={summary}>{summary}</li>)}</ul>
+                <div className="quantity-control"><button type="button" disabled={item.quantity <= (item.product.minimum ?? 1)} aria-label={`Remove one ${item.product.name}`} onClick={() => changeQuantity(item.id,-1)}>−</button><span>{item.quantity}</span><button type="button" disabled={item.quantity >= 100} aria-label={`Add one ${item.product.name}`} onClick={() => changeQuantity(item.id,1)}>+</button></div>
+                <div className={styles.lineActions}><button type="button" onClick={() => editCartLine(item)}>Edit options</button><button type="button" onClick={() => removeCartLine(item.id)}>Remove</button></div>
+              </div><strong>{money(item.product.price * item.quantity)}</strong>
+            </div>)}</div>
+            <form className={styles.checkoutForm} onSubmit={submitCheckout}>
+              <div className={styles.totalRow}><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+              <p>{subtotal >= 65 ? "Eligible carts receive free shipping after server review." : `${money(65-subtotal)} away from the advertised free-shipping threshold.`} Final shipping and tax are returned by checkout.</p>
+              {cartHasPendingFiles && <p className={styles.uploadNote}>Product files will be uploaded securely when you continue. Keep this page open until checkout responds.</p>}
+              <h3>Customer details</h3>
+              <div className={styles.checkoutGrid}>
+                <label><span>Name *</span><input required autoComplete="name" value={checkout.name} onChange={(event) => setCheckout((value) => ({ ...value, name: event.target.value }))} /></label>
+                <label><span>Email *</span><input required type="email" autoComplete="email" value={checkout.email} onChange={(event) => setCheckout((value) => ({ ...value, email: event.target.value }))} /></label>
+                <label><span>Phone</span><input type="tel" autoComplete="tel" value={checkout.phone} onChange={(event) => setCheckout((value) => ({ ...value, phone: event.target.value }))} /></label>
               </div>
-            ) : (
-              <>
-                <div className="cart-items">
-                  {cart.map((item) => (
-                    <div className="cart-item" key={item.id}>
-                      <ProductArt product={item} />
-                      <div>
-                        <p>{item.category}</p>
-                        <h3>{item.name}</h3>
-                        <div className="quantity-control" aria-label={`Quantity for ${item.name}`}>
-                          <button type="button" onClick={() => updateQuantity(item.id, -1)} aria-label={`Remove one ${item.name}`}>−</button>
-                          <span>{item.quantity}</span>
-                          <button type="button" onClick={() => updateQuantity(item.id, 1)} aria-label={`Add one ${item.name}`}>+</button>
-                        </div>
-                      </div>
-                      <strong>{formatPrice(item.price * item.quantity)}</strong>
-                    </div>
-                  ))}
-                </div>
-                <div className="cart-summary">
-                  <div><span>Subtotal</span><strong>{formatPrice(subtotal)}</strong></div>
-                  <p>Shipping, tax, and personalization confirmed at checkout.</p>
-                  <button className="button button-dark" type="button" disabled>
-                    Checkout connection coming next
-                  </button>
-                  <button className="continue-shopping" type="button" onClick={() => setCartOpen(false)}>Continue shopping</button>
-                </div>
-              </>
-            )}
-          </aside>
-        </div>
-      )}
+              <fieldset className={styles.fulfillment}><legend>Fulfillment *</legend><label><input type="radio" name="fulfillment" checked={checkout.fulfillmentMethod === "pickup"} onChange={() => setCheckout((value) => ({ ...value, fulfillmentMethod: "pickup" }))} /> Local pickup</label><label><input type="radio" name="fulfillment" checked={checkout.fulfillmentMethod === "shipping"} onChange={() => setCheckout((value) => ({ ...value, fulfillmentMethod: "shipping" }))} /> US shipping</label></fieldset>
+              {checkout.fulfillmentMethod === "shipping" && <div className={styles.addressGrid}>
+                <label className={styles.fullWidth}><span>Address *</span><input required autoComplete="shipping address-line1" value={checkout.line1} onChange={(event) => setCheckout((value) => ({ ...value, line1: event.target.value }))} /></label>
+                <label className={styles.fullWidth}><span>Apartment, suite, etc.</span><input autoComplete="shipping address-line2" value={checkout.line2} onChange={(event) => setCheckout((value) => ({ ...value, line2: event.target.value }))} /></label>
+                <label><span>City *</span><input required autoComplete="shipping address-level2" value={checkout.city} onChange={(event) => setCheckout((value) => ({ ...value, city: event.target.value }))} /></label>
+                <label><span>State *</span><input required pattern="[A-Za-z]{2}" maxLength={2} autoComplete="shipping address-level1" value={checkout.state} onChange={(event) => setCheckout((value) => ({ ...value, state: event.target.value }))} /></label>
+                <label><span>ZIP code *</span><input required pattern="[0-9]{5}(-[0-9]{4})?" autoComplete="shipping postal-code" value={checkout.postalCode} onChange={(event) => setCheckout((value) => ({ ...value, postalCode: event.target.value }))} /></label>
+              </div>}
+              {checkoutError && <p className={styles.formError} role="alert">{checkoutError}</p>}
+              {checkoutMessage && <p className={styles.formSuccess} role="status">{checkoutMessage}</p>}
+              <button className="button button-dark" disabled={checkoutPending} type="submit">{checkoutPending ? (cartHasPendingFiles ? "Uploading & preparing…" : "Preparing secure checkout…") : "Continue to secure checkout"}</button>
+              <small>We create and price the order on the server. Payment is collected only if the order API returns a hosted checkout link.</small>
+            </form>
+          </>}
+        </aside>
+      </div>}
+
+      <nav className="app-tabs" aria-label="Mobile app navigation"><a href="#top"><span>⌂</span>Home</a><button type="button" onClick={() => chooseCollection("Best Sellers")}><span>▦</span>Shop</button><button type="button" onClick={() => openProduct(LAUNCH_PRODUCTS[0])}><span>✦</span>Customize</button><a href="/account"><span>◎</span>Account</a><button type="button" onClick={() => setCartOpen(true)}><span>▱</span>Cart{itemCount > 0 && <i>{itemCount}</i>}</button></nav>
     </main>
   );
 }

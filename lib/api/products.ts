@@ -3,7 +3,8 @@ import { parseJsonColumn } from "./fields";
 export const PRODUCT_COLUMNS = `id, slug, sku, name, short_description, description, category,
          product_type, base_price_cents, compare_at_price_cents, currency,
          material, image_url, gallery_json, personalization_schema_json,
-         attributes_json, lead_time_min_days, lead_time_max_days, is_featured`;
+         attributes_json, lead_time_min_days, lead_time_max_days, minimum_quantity,
+         is_featured`;
 
 export type ProductRow = {
   id: string;
@@ -24,6 +25,7 @@ export type ProductRow = {
   attributes_json: string;
   lead_time_min_days: number;
   lead_time_max_days: number;
+  minimum_quantity: number;
   is_featured: number;
 };
 
@@ -57,6 +59,7 @@ export function publicProduct(row: ProductRow) {
       min: row.lead_time_min_days,
       max: row.lead_time_max_days,
     },
+    minimumQuantity: row.minimum_quantity,
     featured: Boolean(row.is_featured),
   };
 }

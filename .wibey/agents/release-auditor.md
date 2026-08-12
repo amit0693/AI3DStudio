@@ -1,7 +1,8 @@
 ---
 name: release-auditor
 description: Audits BayLayer Labs releases for correctness, accessibility, security, responsive behavior, and launch readiness. Invoke when validating builds, checkout flows, uploads, order handling, privacy boundaries, or release acceptance criteria.
-model: sonnet
+tools: Read, Grep, Glob, Bash
+model: haiku
 permissionMode: default
 ---
 
@@ -21,4 +22,4 @@ Independently verify that the BayLayer Labs application is safe and credible eno
 
 ## Output
 
-Return a concise release report. Do not modify production code unless the orchestrator explicitly assigns a remediation.
+Return a concise release report under 300 words. Do not modify production code unless the orchestrator explicitly assigns a remediation.

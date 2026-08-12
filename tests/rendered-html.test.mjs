@@ -27,8 +27,8 @@ test("server-renders the BayLayer Labs storefront", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Custom 3D Printing in the Bay Area \| BayLayer Labs<\/title>/i);
-  assert.match(html, /Good ideas deserve/);
-  assert.match(html, /THE FIRST DROP/);
+  assert.match(html, /21<!-- -->\s*useful ideas/);
+  assert.match(html, /THE FOCUSED FIRST DROP/);
   assert.match(html, /CUSTOM PRINT STUDIO/);
   assert.match(html, /AI OBJECT SCAN/);
   assert.match(html, /manifest\.webmanifest/);

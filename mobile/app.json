@@ -2,10 +2,10 @@
   "expo": {
     "name": "BayLayer Labs",
     "slug": "baylayer-labs-mobile",
-    "description": "Browse locally made 3D prints and request server-verified STL estimates from BayLayer Labs.",
-    "version": "1.0.0",
-    "backgroundColor": "#F6F1E7",
-    "primaryColor": "#123C35",
+    "description": "Shop personalized gifts and practical 3D prints, or request a server-verified STL estimate from BayLayer Labs.",
+    "version": "1.1.0",
+    "backgroundColor": "#F3F8F1",
+    "primaryColor": "#A8D5AF",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "baylayer",
@@ -22,7 +22,7 @@
     "android": {
       "package": "com.baylayerlabs.mobile",
       "versionCode": 1,
-      "backgroundColor": "#F6F1E7",
+      "backgroundColor": "#F3F8F1",
       "userInterfaceStyle": "light",
       "allowBackup": false,
       "blockedPermissions": [
@@ -31,11 +31,19 @@
       ],
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#123C35",
-        "foregroundImage": "./assets/images/android-icon-foreground-v2.png",
+        "backgroundColor": "#A8D5AF",
+        "foregroundImage": "./assets/images/icon.png",
         "monochromeImage": "./assets/images/android-icon-monochrome-v2.png"
       },
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [{ "scheme": "baylayer", "host": "checkout-return" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "static",
@@ -46,7 +54,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#123C35",
+          "backgroundColor": "#F3F8F1",
           "image": "./assets/images/icon.png",
           "imageWidth": 128
         }
