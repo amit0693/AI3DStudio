@@ -154,7 +154,7 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  segment: { minHeight: 52, flexDirection: 'row', padding: 4, backgroundColor: '#E4E7E3', borderRadius: radius.pill },
+  segment: { minHeight: 52, flexDirection: 'row', padding: 4, backgroundColor: '#E9E4EF', borderRadius: radius.pill },
   segmentButton: { flex: 1, minHeight: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   segmentSelected: { backgroundColor: colors.ink },
   segmentLabel: { color: colors.text, fontWeight: '900' }, segmentLabelSelected: { color: colors.white },

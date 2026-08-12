@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius, shadow, spacing } from '@/constants/theme';
+import { colors, radius, shadow, spacing, typography } from '@/constants/theme';
 import { getProductImage } from '@/lib/product-assets';
 import type { Product } from '@/lib/types';
 
@@ -108,10 +108,10 @@ export function EmptyState({ title, message, action }: { title: string; message:
 
 const categoryColors: Record<string, { background: string; object: string }> = {
   'Gifts & Personalization': { background: '#FFE7DD', object: colors.orange },
-  'Desk & Tech': { background: '#DFF3EB', object: colors.forest },
-  'Home & Organization': { background: '#E8E9E2', object: '#5D716A' },
-  'Plants & Decor': { background: '#E5F0DA', object: '#6D9A60' },
-  'Gaming & Hobbies': { background: '#E7E4F2', object: '#655F91' },
+  'Desk & Tech': { background: '#ECE7FA', object: colors.forest },
+  'Home & Organization': { background: '#EEEAF2', object: '#565577' },
+  'Plants & Decor': { background: '#F3E4F5', object: '#9167A6' },
+  'Gaming & Hobbies': { background: '#E7E4F7', object: '#655F91' },
   Seasonal: { background: '#F7E8C2', object: '#C27C33' },
   'Business & Events': { background: '#DCE9EE', object: '#40718A' },
 };
@@ -145,15 +145,15 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
   scroll: { flex: 1 },
   content: { padding: spacing.md, paddingBottom: 56, gap: spacing.md },
-  eyebrow: { color: colors.orangeDark, fontSize: 12, fontWeight: '900', letterSpacing: 1.45, textTransform: 'uppercase' },
+  eyebrow: { color: colors.orangeDark, fontFamily: typography.label, fontSize: 11, fontWeight: '700', letterSpacing: 1.35, textTransform: 'uppercase' },
   eyebrowLight: { color: colors.mint },
-  title: { color: colors.ink, fontSize: 36, lineHeight: 40, fontWeight: '900', letterSpacing: -1.2 },
+  title: { color: colors.ink, fontFamily: typography.display, fontSize: 42, lineHeight: 44, fontWeight: '700', letterSpacing: -1.1 },
   titleLight: { color: colors.white },
   sectionTitleRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  sectionTitle: { color: colors.ink, fontSize: 23, lineHeight: 28, fontWeight: '900', letterSpacing: -0.4 },
-  body: { color: colors.text, fontSize: 16, lineHeight: 24 },
+  sectionTitle: { color: colors.ink, fontFamily: typography.display, fontSize: 27, lineHeight: 31, fontWeight: '700', letterSpacing: -0.35 },
+  body: { color: colors.text, fontFamily: typography.body, fontSize: 16, lineHeight: 24 },
   muted: { color: colors.muted },
-  bodyLight: { color: '#E7F4F0' },
+  bodyLight: { color: '#F0EAFF' },
   card: { backgroundColor: colors.paper, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: spacing.md, gap: spacing.sm },
   button: { minHeight: 50, paddingHorizontal: spacing.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.orange },
   buttonCompact: { minHeight: 44, paddingHorizontal: 14 },
@@ -163,29 +163,29 @@ const styles = StyleSheet.create({
   button_dark: { backgroundColor: colors.ink, borderColor: colors.ink },
   buttonDisabled: { opacity: 0.45 },
   pressed: { transform: [{ scale: 0.985 }], opacity: 0.88 },
-  buttonLabel: { color: colors.white, fontWeight: '900', fontSize: 15 },
+  buttonLabel: { color: colors.white, fontFamily: typography.body, fontWeight: '800', fontSize: 15 },
   buttonLabelDark: { color: colors.ink },
   fieldWrap: { gap: 7 },
-  label: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  input: { minHeight: 50, borderWidth: 1, borderColor: '#C8D1CC', borderRadius: radius.sm, paddingHorizontal: 14, color: colors.text, fontSize: 16, backgroundColor: colors.white },
-  hint: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  label: { color: colors.ink, fontFamily: typography.body, fontSize: 14, fontWeight: '800' },
+  input: { minHeight: 50, borderWidth: 1, borderColor: '#D7CFE5', borderRadius: radius.sm, paddingHorizontal: 14, color: colors.text, fontFamily: typography.body, fontSize: 16, backgroundColor: colors.white },
+  hint: { color: colors.muted, fontFamily: typography.body, fontSize: 12, lineHeight: 17 },
   pill: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   pill_mint: { backgroundColor: colors.mint },
   pill_orange: { backgroundColor: colors.peach },
-  pill_neutral: { backgroundColor: '#E7EAE7' },
+  pill_neutral: { backgroundColor: '#ECE8F1' },
   pill_dark: { backgroundColor: colors.ink },
-  pillText: { color: colors.ink, fontWeight: '800', fontSize: 12 },
+  pillText: { color: colors.ink, fontFamily: typography.label, fontWeight: '700', fontSize: 10 },
   pillTextLight: { color: colors.white },
   empty: { alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, ...shadow },
   emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.mintPale, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
   emptyDot: { width: 32, height: 32, borderRadius: 8, backgroundColor: colors.mint, transform: [{ rotate: '12deg' }] },
-  emptyTitle: { color: colors.ink, fontSize: 22, fontWeight: '900', textAlign: 'center' },
+  emptyTitle: { color: colors.ink, fontFamily: typography.display, fontSize: 26, fontWeight: '700', textAlign: 'center' },
   emptyMessage: { textAlign: 'center' },
   visual: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   visualHalo: { position: 'absolute', width: 130, height: 130, borderRadius: 65, borderWidth: 1, opacity: 0.22 },
   visualTop: { width: 82, height: 48, borderRadius: 14, transform: [{ rotate: '-7deg' }], ...shadow },
   visualMiddle: { width: 112, height: 34, borderRadius: 10, marginTop: -8, borderWidth: 1, borderColor: colors.line },
   visualBase: { width: 142, height: 17, borderRadius: 8, marginTop: 7, opacity: 0.92 },
-  visualSku: { position: 'absolute', right: 10, bottom: 8, color: colors.ink, opacity: 0.55, fontWeight: '900', fontSize: 10, letterSpacing: 0.8 },
+  visualSku: { position: 'absolute', right: 10, bottom: 8, color: colors.ink, fontFamily: typography.label, opacity: 0.55, fontWeight: '700', fontSize: 9, letterSpacing: 0.8 },
   loading: { padding: spacing.xl, gap: spacing.sm, alignItems: 'center' },
 });

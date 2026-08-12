@@ -1,16 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, Space_Mono } from "next/font/google";
 import { PwaRegistration } from "./components/PwaRegistration";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const bodyFont = DM_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const displayFont = Cormorant_Garamond({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const labelFont = Space_Mono({
+  variable: "--font-label",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +46,7 @@ export const metadata: Metadata = {
       title: "BayLayer Labs | Ideas, made local.",
       description:
         "Useful, personalized 3D prints and custom prototypes made in the Bay Area.",
-      images: [{ url: "/og.png", width: 1720, height: 914 }],
+      images: [{ url: "/og.png", width: 1672, height: 941 }],
     },
     twitter: {
       card: "summary_large_image",
@@ -51,7 +58,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#123c35",
+  themeColor: "#17182f",
   colorScheme: "light",
 };
 
@@ -62,7 +69,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${labelFont.variable}`}>
         {children}
         <PwaRegistration />
       </body>

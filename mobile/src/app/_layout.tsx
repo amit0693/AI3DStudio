@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AppProvider } from '@/context/app-context';
-import { colors } from '@/constants/theme';
+import { colors, typography } from '@/constants/theme';
 
 export default function RootLayout() {
   return (
@@ -12,7 +12,7 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.ink },
           headerTintColor: colors.cream,
-          headerTitleStyle: { fontWeight: '800' },
+          headerTitleStyle: { fontFamily: typography.display, fontSize: 21, fontWeight: '700' },
           contentStyle: { backgroundColor: colors.cream },
           headerBackButtonDisplayMode: 'minimal',
         }}>

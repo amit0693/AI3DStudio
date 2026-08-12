@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.orange, alignItems: 'center', justifyContent: 'center' },
   stepNumberText: { color: colors.white, fontWeight: '900' },
-  stepCopy: { flex: 1, gap: 3 }, stepTitle: { color: colors.white, fontWeight: '900', fontSize: 16 }, stepText: { color: '#CFE6DF', lineHeight: 20 },
+  stepCopy: { flex: 1, gap: 3 }, stepTitle: { color: colors.white, fontWeight: '900', fontSize: 16 }, stepText: { color: '#E3DAF5', lineHeight: 20 },
   service: { padding: spacing.lg, gap: spacing.md, backgroundColor: colors.paper },
   serviceTitle: { color: colors.ink, fontSize: 26, lineHeight: 31, fontWeight: '900' },
 });

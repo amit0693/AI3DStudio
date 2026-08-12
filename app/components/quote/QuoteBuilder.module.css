@@ -1,10 +1,10 @@
 .builder {
-  --quote-ink: #16231c;
-  --quote-muted: #647169;
-  --quote-line: #dce4df;
-  --quote-accent: #176b45;
-  --quote-accent-strong: #0d5032;
-  --quote-soft: #f2f7f4;
+  --quote-ink: #17182f;
+  --quote-muted: #696579;
+  --quote-line: #e4deef;
+  --quote-accent: #7557a6;
+  --quote-accent-strong: #523782;
+  --quote-soft: #f7f2ff;
   color: var(--quote-ink);
   display: grid;
   gap: 1.5rem;
@@ -46,7 +46,7 @@
 
 .dropzone {
   background: var(--quote-soft);
-  border: 1.5px dashed #a9b9af;
+  border: 1.5px dashed #b9add0;
   border-radius: 1rem;
   cursor: pointer;
   display: grid;
@@ -57,7 +57,7 @@
 
 .dropzone:hover,
 .dropzone:focus-within {
-  background: #eaf3ee;
+  background: #eee8ff;
   border-color: var(--quote-accent);
 }
 
@@ -176,7 +176,7 @@
 }
 
 .result {
-  background: #fbfdfc;
+  background: #fffdfb;
   display: grid;
   gap: 1rem;
 }
