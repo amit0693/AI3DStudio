@@ -33,6 +33,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# ESPHome secrets (hardware/ projects)
+hardware/**/secrets.yaml
+
 # vercel
 .vercel
 

@@ -1,0 +1,119 @@
+# CYD (ESP32-2432S028R) as a Home Assistant wall dashboard.
+#
+# Pinout confirmed against community docs (witnessmenow/ESP32-Cheap-Yellow-Display,
+# randomnerdtutorials.com) for the classic RESISTIVE-touch revision. If your board
+# is a capacitive-touch variant, the touchscreen platform below (xpt2046) is wrong
+# for you — swap to the matching capacitive touch platform instead.
+#
+# This is a starter: display shows a clock, RGB LED and ambient-light sensor are
+# wired up as a smoke test, and one example Home Assistant sensor is pulled in.
+# Extend the display lambda and add touchscreen.on_touch actions to build out a
+# real dashboard once this boots and connects.
+#
+# Validate before flashing: esphome config cyd-dashboard.yaml
+
+esphome:
+  name: cyd-dashboard
+  friendly_name: Wall Dashboard
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+logger:
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 32
+
+# Two independent SPI buses on this board — display and touch do NOT share pins.
+spi:
+  - id: spi_display
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+    miso_pin: GPIO12
+  - id: spi_touch
+    clk_pin: GPIO25
+    mosi_pin: GPIO32
+    miso_pin: GPIO39
+
+display:
+  - platform: ili9xxx
+    spi_id: spi_display
+    model: ILI9341
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    invert_colors: true
+    update_interval: 5s
+    lambda: |-
+      it.fill(Color::BLACK);
+      it.printf(120, 20, id(font_medium), TextAlign::TOP_CENTER, "%s",
+                 id(homeassistant_time).now().strftime("%H:%M").c_str());
+
+touchscreen:
+  - platform: xpt2046
+    id: cyd_touch
+    spi_id: spi_touch
+    cs_pin: GPIO33
+    interrupt_pin: GPIO36
+    update_interval: 50ms
+
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: backlight_pwm
+  # RGB LED on this board is active-low — inverted makes ESPHome's "on" match reality.
+  - platform: ledc
+    pin: GPIO4
+    id: led_red
+    inverted: true
+  - platform: ledc
+    pin: GPIO16
+    id: led_green
+    inverted: true
+  - platform: ledc
+    pin: GPIO17
+    id: led_blue
+    inverted: true
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Dashboard Backlight"
+    id: backlight
+    restore_mode: ALWAYS_ON
+  - platform: rgb
+    name: "Status LED"
+    red: led_red
+    green: led_green
+    blue: led_blue
+
+sensor:
+  - platform: adc
+    pin: GPIO34
+    name: "Ambient Light"
+    id: ldr
+    attenuation: 12db
+    update_interval: 30s
+  # Example only — replace entity_id with a real sensor from your Home Assistant instance.
+  - platform: homeassistant
+    id: outdoor_temp
+    entity_id: sensor.outdoor_temperature
